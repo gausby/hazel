@@ -6,6 +6,7 @@ defmodule Hazel.Torrent.Store.BitField do
 
   @type peer_id :: binary
   @type info_hash :: binary
+  @type session :: {peer_id, info_hash}
   @type on_start ::
     {:ok, pid} |
     {:error, {:already_started, pid} | term}
@@ -15,8 +16,7 @@ defmodule Hazel.Torrent.Store.BitField do
   """
   @spec start_link(peer_id, info_hash, Map.t) :: on_start
   def start_link(peer_id, info_hash, opts) do
-
-    Agent.start_link(initial_value(info_hash, opts), name: via_name(peer_id, info_hash))
+    Agent.start_link(initial_value(info_hash, opts), name: via_name({peer_id, info_hash}))
   end
 
   defp initial_value(info_hash, opts) do
@@ -28,38 +28,38 @@ defmodule Hazel.Torrent.Store.BitField do
     div(length, piece_length) + (if rem(length, piece_length) == 0, do: 0, else: 1)
   end
 
-  defp via_name(peer_id, info_hash), do: {:via, :gproc, bitfield_name(peer_id, info_hash)}
-  defp bitfield_name(peer_id, info_hash), do: {:n, :l, {__MODULE__, peer_id, info_hash}}
+  defp via_name(session), do: {:via, :gproc, bitfield_name(session)}
+  defp bitfield_name({peer_id, info_hash}), do: {:n, :l, {__MODULE__, peer_id, info_hash}}
 
   @doc """
   Indicate that we have received the `piece` for the given `info_hash`.
   """
-  @spec have(peer_id, info_hash, non_neg_integer) :: :ok
-  def have(peer_id, info_hash, piece) do
-    Agent.update(via_name(peer_id, info_hash), BitFieldSet, :set, [piece])
+  @spec have(session, non_neg_integer) :: :ok
+  def have(session, piece) do
+    Agent.update(via_name(session), BitFieldSet, :set, [piece])
   end
 
   @doc """
   Indicate whether we have the given `piece` for the `info_hash`
   """
-  @spec has?(peer_id, info_hash, non_neg_integer) :: boolean
-  def has?(peer_id, info_hash, piece) do
-    Agent.get(via_name(peer_id, info_hash), BitFieldSet, :member?, [piece])
+  @spec has?(session, non_neg_integer) :: boolean
+  def has?(session, piece) do
+    Agent.get(via_name(session), BitFieldSet, :member?, [piece])
   end
 
   @doc """
   Returns true if we have all the pieces for the given `info_hash`
   """
-  @spec has_all?(peer_id, info_hash) :: boolean
-  def has_all?(peer_id, info_hash) do
-    Agent.get(via_name(peer_id, info_hash), BitFieldSet, :has_all?, [])
+  @spec has_all?(session) :: boolean
+  def has_all?(session) do
+    Agent.get(via_name(session), BitFieldSet, :has_all?, [])
   end
 
   @doc """
   Return a set of the available pieces for the given `info_hash`
   """
-  @spec available(peer_id, info_hash) :: MapSet.t
-  def available(peer_id, info_hash) do
-    Agent.get(via_name(peer_id, info_hash), &(&1.pieces))
+  @spec available(session) :: MapSet.t
+  def available(session) do
+    Agent.get(via_name(session), &(&1.pieces))
   end
 end

@@ -4,15 +4,15 @@ defmodule Hazel.Torrent.Store.Processes do
   alias Hazel.Torrent.Store
 
   def start_link(peer_id, info_hash, opts) do
-    Supervisor.start_link(__MODULE__, {peer_id, info_hash, opts}, name: via_name(peer_id, info_hash))
+    Supervisor.start_link(__MODULE__, {peer_id, info_hash, opts}, name: via_name({peer_id, info_hash}))
   end
 
-  defp via_name(peer_id, name), do: {:via, :gproc, processes_name(peer_id, name)}
-  defp processes_name(peer_id, name), do: {:n, :l, {__MODULE__, peer_id, name}}
+  defp via_name(session), do: {:via, :gproc, processes_name(session)}
+  defp processes_name({peer_id, info_hash}), do: {:n, :l, {__MODULE__, peer_id, info_hash}}
 
-  def get_piece(peer_id, info_hash, piece_index) do
-    with {:ok, pid} <- who_is(peer_id, info_hash),
-         :ok <- piece_not_available?(peer_id, info_hash, piece_index),
+  def get_piece(session, piece_index) do
+    with {:ok, pid} <- who_is(session),
+         :ok <- piece_not_available?(session, piece_index),
          result = Supervisor.start_child(pid, [piece_index]) do
       result
     end
@@ -47,8 +47,8 @@ defmodule Hazel.Torrent.Store.Processes do
     div(length, piece_length) + (if rem(length, piece_length) == 0, do: 0, else: 1)
   end
 
-  defp who_is(peer_id, info_hash) do
-    case :gproc.where(processes_name(peer_id, info_hash)) do
+  defp who_is(session) do
+    case :gproc.where(processes_name(session)) do
       pid when is_pid(pid) ->
         {:ok, pid}
 
@@ -57,8 +57,8 @@ defmodule Hazel.Torrent.Store.Processes do
     end
   end
 
-  defp piece_not_available?(peer_id, info_hash, piece_index) do
-    if Store.BitField.has?(peer_id, info_hash, piece_index),
+  defp piece_not_available?(session, piece_index) do
+    if Store.BitField.has?(session, piece_index),
       do: {:error, :requested_piece_is_already_available},
       else: :ok
   end
@@ -153,7 +153,7 @@ defmodule Hazel.Torrent.Store.Processes.Worker do
                                          info_hash: info_hash,
                                          piece_number: piece_number} = state) do
     # Request peer from swarm that has the given piece
-    Hazel.Torrent.Swarm.request_peer(peer_id, info_hash, piece_number)
+    Hazel.Torrent.Swarm.request_peer({peer_id, info_hash}, piece_number)
     {:next_state, :awaiting_peer, state}
   end
   def disconnected(_, state) do
@@ -191,7 +191,7 @@ defmodule Hazel.Torrent.Store.Processes.Worker do
       {:request, state.piece_number, offset, byte_size(data)}
 
     if chunk_request in state.awaiting do
-      :ok = Store.File.write_chunk(state.peer_id, state.info_hash, state.piece_number, offset, data)
+      :ok = Store.File.write_chunk({state.peer_id, state.info_hash}, state.piece_number, offset, data)
 
       new_state =
         %{state|awaiting: state.awaiting -- [chunk_request],
@@ -218,10 +218,10 @@ defmodule Hazel.Torrent.Store.Processes.Worker do
   end
 
   defp what_next(%{plan: [], awaiting: []} = state) do
-    if Store.File.validate_piece(state.peer_id, state.info_hash, state.piece_number) do
-      :ok = Store.BitField.have(state.peer_id, state.info_hash, state.piece_number)
+    if Store.File.validate_piece({state.peer_id, state.info_hash}, state.piece_number) do
+      :ok = Store.BitField.have({state.peer_id, state.info_hash}, state.piece_number)
       # should this be handled by the swarm controller?
-      Hazel.Torrent.Swarm.broadcast_piece(state.peer_id, state.info_hash, state.piece_number)
+      Hazel.Torrent.Swarm.broadcast_piece({state.peer_id, state.info_hash}, state.piece_number)
       {:stop, :normal, state}
     else
       # todo: keep track of the chunks that has been written by the

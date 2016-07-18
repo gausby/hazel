@@ -4,11 +4,11 @@ defmodule Hazel.Torrent.SwarmFaux do
   # Client API
   def start_link(peer_id, info_hash, opts \\ []) do
     opts = Keyword.merge(opts, pid: self, info_hash: info_hash, peer_id: peer_id)
-    GenServer.start_link(__MODULE__, opts, name: via_name(peer_id, info_hash))
+    GenServer.start_link(__MODULE__, opts, name: via_name({peer_id, info_hash}))
   end
 
-  defp via_name(peer_id, info_hash), do: {:via, :gproc, swarm_name(peer_id, info_hash)}
-  defp swarm_name(peer_id, info_hash), do: {:n, :l, {Hazel.Torrent.Swarm, peer_id, info_hash}}
+  defp via_name(session), do: {:via, :gproc, swarm_name(session)}
+  defp swarm_name({peer_id, info_hash}), do: {:n, :l, {Hazel.Torrent.Swarm, peer_id, info_hash}}
 
   # Server callbacks
   def init(state) do

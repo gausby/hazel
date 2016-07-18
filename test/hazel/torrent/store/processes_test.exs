@@ -75,7 +75,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
       create_processes(peer_id, info_hash, "foobar", [piece_length: 3])
 
     # Ask for piece, should ask the swarm for peers
-    Store.Processes.get_piece(peer_id, info_hash, 0)
+    Store.Processes.get_piece({peer_id, info_hash}, 0)
     assert_receive {:got_request, 0}
     # When a peer is introduced to the swarm and then removed it
     # should request a new peer
@@ -97,14 +97,14 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
       create_processes(peer_id, info_hash, "abcdefgh", [piece_length: 2])
 
     # Ask for piece, should ask the swarm for peers
-    Store.Processes.get_piece(peer_id, info_hash, 0)
+    Store.Processes.get_piece({peer_id, info_hash}, 0)
     assert_receive {:got_request, 0}
 
     {:ok, peer_pid} = PeerMock.start_link(info_hash)
     :ok = Store.Processes.Worker.announce_peer({info_hash, 0}, peer_pid)
     :ok = PeerMock.send_data(peer_pid, 0, 0, "ab")
     :timer.sleep 10
-    assert {:ok, "ab"} = Hazel.Torrent.Store.File.get_chunk(peer_id, info_hash, 0, 0, 2)
+    assert {:ok, "ab"} = Hazel.Torrent.Store.File.get_chunk({peer_id, info_hash}, 0, 0, 2)
   end
 
   test "should send \"have\" to the controller when piece is complete and verified",
@@ -123,7 +123,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     %{} = create_processes(peer_id, info_hash, "abcdefgh", [piece_length: 8, chunk_size: 4])
 
     # Ask for piece, should ask the swarm for peers
-    {:ok, pid} = Store.Processes.get_piece(peer_id, info_hash, 0)
+    {:ok, pid} = Store.Processes.get_piece({peer_id, info_hash}, 0)
     assert_receive {:got_request, 0}
 
     # create peer, announce it, and send data
@@ -153,7 +153,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     %{} = create_processes(peer_id, info_hash, "abcdefgh", [piece_length: 8, chunk_size: 8])
 
     # Ask for piece, should ask the swarm for peers
-    {:ok, _pid} = Store.Processes.get_piece(peer_id, info_hash, 0)
+    {:ok, _pid} = Store.Processes.get_piece({peer_id, info_hash}, 0)
     assert_receive {:got_request, 0}
 
     # create peer, announce it, and send incorrect data
@@ -186,7 +186,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     %{} = create_processes(peer_id, info_hash, "abcdefgh", [piece_length: 8, chunk_size: 2])
 
     # Ask for piece, should ask the swarm for peers
-    {:ok, pid} = Store.Processes.get_piece(peer_id, info_hash, 0)
+    {:ok, pid} = Store.Processes.get_piece({peer_id, info_hash}, 0)
     assert_receive {:got_request, 0}
 
     # create peer, announce it, and send incorrect data

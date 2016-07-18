@@ -2,11 +2,11 @@ defmodule Hazel.Torrent.Supervisor do
   use Supervisor
 
   def start_link(peer_id, info_hash, opts) do
-    Supervisor.start_link(__MODULE__, {peer_id, info_hash, opts}, name: via_name(peer_id, info_hash))
+    Supervisor.start_link(__MODULE__, {peer_id, info_hash, opts}, name: via_name({peer_id, info_hash}))
   end
 
-  defp via_name(peer_id, info_hash), do: {:via, :gproc, supervisor_name(peer_id, info_hash)}
-  defp supervisor_name(peer_id, info_hash), do: {:n, :l, {__MODULE__, peer_id, info_hash}}
+  defp via_name(session), do: {:via, :gproc, supervisor_name(session)}
+  defp supervisor_name({peer_id, info_hash}), do: {:n, :l, {__MODULE__, peer_id, info_hash}}
 
   def init({peer_id, info_hash, opts}) do
     children = [

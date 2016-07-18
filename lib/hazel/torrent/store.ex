@@ -8,11 +8,11 @@ defmodule Hazel.Torrent.Store do
   use Supervisor
 
   def start_link(peer_id, info_hash, opts) do
-    Supervisor.start_link(__MODULE__, {peer_id, info_hash, opts}, name: via_name(peer_id, info_hash))
+    Supervisor.start_link(__MODULE__, {peer_id, info_hash, opts}, name: via_name({peer_id, info_hash}))
   end
 
-  defp via_name(peer_id, info_hash), do: {:via, :gproc, store_name(peer_id, info_hash)}
-  defp store_name(peer_id, info_hash), do: {:n, :l, {__MODULE__, peer_id, info_hash}}
+  defp via_name(session), do: {:via, :gproc, store_name(session)}
+  defp store_name({peer_id, info_hash}), do: {:n, :l, {__MODULE__, peer_id, info_hash}}
 
   def init({peer_id, info_hash, opts}) do
     children = [
@@ -25,9 +25,9 @@ defmodule Hazel.Torrent.Store do
     supervise(children, strategy: :one_for_all)
   end
 
-  defdelegate get_piece(peer_id, info_hash, piece_index), to: Store.Processes
+  defdelegate get_piece(session, piece_index), to: Store.Processes
 
-  defdelegate get_chunk(peer_id, info_hash, piece_index, offset, length), to: Store.File
+  defdelegate get_chunk(session, piece_index, offset, length), to: Store.File
 
-  defdelegate available(peer_id, info_hash), to: Store.BitField
+  defdelegate available(session), to: Store.BitField
 end

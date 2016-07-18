@@ -4,11 +4,11 @@ defmodule Hazel.Torrent.Controller do
 
   # Client API
   def start_link(peer_id, info_hash, opts) do
-    GenServer.start_link(__MODULE__, opts, via_name: via_name(peer_id, info_hash))
+    GenServer.start_link(__MODULE__, opts, via_name: via_name({peer_id, info_hash}))
   end
 
-  defp via_name(peer_id, info_hash), do: {:via, :gproc, controller_name(peer_id, info_hash)}
-  defp controller_name(peer_id, info_hash), do: {:n, :l, {__MODULE__, peer_id, info_hash}}
+  defp via_name(session), do: {:via, :gproc, controller_name(session)}
+  defp controller_name({peer_id, info_hash}), do: {:n, :l, {__MODULE__, peer_id, info_hash}}
 
   # Server callbacks
   def init(state) do

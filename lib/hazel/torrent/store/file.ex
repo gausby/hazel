@@ -8,6 +8,7 @@ defmodule Hazel.Torrent.Store.File do
 
   @type peer_id :: binary
   @type info_hash :: binary
+  @type session :: {peer_id, info_hash}
   @type piece_index :: non_neg_integer
   @type offset :: non_neg_integer
   @type chunk_length :: non_neg_integer
@@ -27,36 +28,36 @@ defmodule Hazel.Torrent.Store.File do
 
   # Client API
   def start_link(peer_id, info_hash, opts \\ []) do
-    GenServer.start_link(__MODULE__, opts, name: via_name(peer_id, info_hash))
+    GenServer.start_link(__MODULE__, opts, name: via_name({peer_id, info_hash}))
   end
 
-  defp via_name(peer_id, info_hash), do: {:via, :gproc, file_name(peer_id, info_hash)}
-  defp file_name(peer_id, info_hash), do: {:n, :l, {__MODULE__, peer_id, info_hash}}
+  defp via_name(session), do: {:via, :gproc, file_name(session)}
+  defp file_name({peer_id, info_hash}), do: {:n, :l, {__MODULE__, peer_id, info_hash}}
 
-  @spec write_chunk(peer_id, info_hash, piece_index, offset, binary) ::
+  @spec write_chunk(session, piece_index, offset, binary) ::
     {:error, :out_of_bounds} | {:error, :out_of_piece_bounds} | {:error, term} |
     :ok
-  def write_chunk(peer_id, info_hash, piece_index, offset, content) do
-    GenServer.call(via_name(peer_id, info_hash), {:write_chunk, piece_index, offset, content})
+  def write_chunk(session, piece_index, offset, content) do
+    GenServer.call(via_name(session), {:write_chunk, piece_index, offset, content})
   end
 
-  @spec get_chunk(peer_id, info_hash, piece_index, offset, chunk_length) ::
+  @spec get_chunk(session, piece_index, offset, chunk_length) ::
     {:error, :out_of_piece_bounds} | {:error, :out_of_bounds} |
     {:ok, iodata | nodata}
-  def get_chunk(peer_id, info_hash, piece_index, offset, chunk_length) do
-    GenServer.call(via_name(peer_id, info_hash), {:get_chunk, piece_index, offset, chunk_length})
+  def get_chunk(session, piece_index, offset, chunk_length) do
+    GenServer.call(via_name(session), {:get_chunk, piece_index, offset, chunk_length})
   end
 
-  @spec get_piece(peer_id, info_hash, piece_index) ::
+  @spec get_piece(session, piece_index) ::
     {:error, :out_of_bounds} | {:error, :out_of_piece_bounds} |
     {:ok, iodata | nodata}
-  def get_piece(peer_id, info_hash, piece_index) do
-    GenServer.call(via_name(peer_id, info_hash), {:get_piece, piece_index})
+  def get_piece(session, piece_index) do
+    GenServer.call(via_name(session), {:get_piece, piece_index})
   end
 
-  @spec validate_piece(peer_id, info_hash, piece_index ) :: boolean
-  def validate_piece(peer_id, info_hash, piece_index) do
-    GenServer.call(via_name(peer_id, info_hash), {:validate_piece, piece_index})
+  @spec validate_piece(session, piece_index ) :: boolean
+  def validate_piece(session, piece_index) do
+    GenServer.call(via_name(session), {:validate_piece, piece_index})
   end
 
   # Server callbacks
