@@ -24,7 +24,7 @@ defmodule Hazel.Supervisor do
       # acceptor
       # resource manager
       worker(Hazel.Blacklist, [peer_id]),
-      # peer discovery
+      supervisor(Hazel.PeerDiscovery, [peer_id]),
       supervisor(Hazel.Torrent, [peer_id])
     ]
     supervise(children, strategy: :one_for_one)
