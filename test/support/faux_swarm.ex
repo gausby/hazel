@@ -25,9 +25,10 @@ defmodule Hazel.Torrent.SwarmFaux do
 
   def handle_call(message, _from, state) do
     [command|args] = Tuple.to_list(message)
-    if is_function(state[:cb][command]) do
-      apply(state[:cb][command], args ++ [state])
-    end
-    {:reply, :ok, state}
+    reply =
+      if is_function(state[:cb][command]) do
+        apply(state[:cb][command], args ++ [state])
+      end
+    {:reply, reply, state}
   end
 end

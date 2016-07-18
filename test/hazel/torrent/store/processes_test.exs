@@ -103,7 +103,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     {:ok, peer_pid} = PeerMock.start_link(info_hash)
     :ok = Store.Processes.Worker.announce_peer({info_hash, 0}, peer_pid)
     :ok = PeerMock.send_data(peer_pid, 0, 0, "ab")
-    :timer.sleep 10
+    :timer.sleep 100
     assert {:ok, "ab"} = Hazel.Torrent.Store.File.get_chunk({peer_id, info_hash}, 0, 0, 2)
   end
 
@@ -134,6 +134,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     # the manager should receive a note about us having the piece, and
     # the download process should be terminated
     assert_receive {:broadcast_piece, 0}
+    :timer.sleep 100
     refute Process.alive? pid
   end
 
@@ -205,6 +206,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     PeerMock.send_data(peer_pid2, 0, 6, "gh")
 
     assert_receive {:broadcast_piece, 0}
+    :timer.sleep 100
     refute Process.alive?(pid)
   end
 
