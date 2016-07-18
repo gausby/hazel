@@ -19,7 +19,7 @@ defmodule Hazel.Supervisor do
   defp via_name(peer_id), do: {:via, :gproc, supervisor_name(peer_id)}
   defp supervisor_name(peer_id), do: {:n, :l, {__MODULE__, peer_id}}
 
-  def init({peer_id, opts}) do
+  def init({peer_id, _opts}) do
     children = [
       # acceptor
       # resource manager
