@@ -53,6 +53,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
   doctest Hazel.Torrent.Store.Processes
 
   alias Hazel.Torrent.Store
+  alias Hazel.TestHelpers.FauxServer
 
   setup do
     context =
@@ -68,8 +69,9 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
       piece_index, _state -> send parent, {:got_request, piece_index}
     end
     {:ok, _pid} =
-      Hazel.Torrent.SwarmFaux.start_link(peer_id, info_hash,
-        [cb: %{request_peer: request_peer_cb}])
+      FauxServer.start_link(peer_id, info_hash,
+        [mod: Hazel.Torrent.Controller,
+         cb: %{request_peer: request_peer_cb}])
 
     %{processes: _processes_pid} =
       create_processes(peer_id, info_hash, "foobar", [piece_length: 3])
@@ -91,8 +93,10 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
       send parent, {:got_request, piece_index}
     end
     {:ok, _pid} =
-      Hazel.Torrent.SwarmFaux.start_link(peer_id, info_hash,
-        [cb: %{request_peer: request_peer_cb}])
+      FauxServer.start_link(peer_id, info_hash,
+        [mod: Hazel.Torrent.Controller,
+         cb: %{request_peer: request_peer_cb}])
+
     %{processes: _processes_pid} =
       create_processes(peer_id, info_hash, "abcdefgh", [piece_length: 2])
 
@@ -117,8 +121,10 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
       send parent, {:broadcast_piece, piece_index}
     end
     {:ok, _pid} =
-      Hazel.Torrent.SwarmFaux.start_link(peer_id, info_hash,
-        [cb: %{request_peer: request_peer_cb, broadcast_piece: broadcast_piece_cb}])
+      FauxServer.start_link(peer_id, info_hash,
+        [mod: Hazel.Torrent.Controller,
+         cb: %{request_peer: request_peer_cb,
+               broadcast_piece: broadcast_piece_cb}])
 
     %{} = create_processes(peer_id, info_hash, "abcdefgh", [piece_length: 8, chunk_size: 4])
 
@@ -148,8 +154,11 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
       send parent, {:broadcast_piece, piece_index}
     end
     {:ok, _pid} =
-      Hazel.Torrent.SwarmFaux.start_link(peer_id, info_hash,
-        [cb: %{request_peer: request_peer_cb, broadcast_piece: broadcast_piece_cb}])
+      FauxServer.start_link(peer_id, info_hash,
+        [mod: Hazel.Torrent.Controller,
+         cb: %{request_peer: request_peer_cb,
+               broadcast_piece: broadcast_piece_cb}])
+
 
     %{} = create_processes(peer_id, info_hash, "abcdefgh", [piece_length: 8, chunk_size: 8])
 
@@ -180,8 +189,9 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     broadcast_piece_cb =
       fn piece_index, _state -> send parent, {:broadcast_piece, piece_index} end
     {:ok, _pid} =
-      Hazel.Torrent.SwarmFaux.start_link(peer_id, info_hash,
-        [cb: %{request_peer: request_peer_cb,
+      FauxServer.start_link(peer_id, info_hash,
+        [mod: Hazel.Torrent.Controller,
+         cb: %{request_peer: request_peer_cb,
                broadcast_piece: broadcast_piece_cb}])
 
     %{} = create_processes(peer_id, info_hash, "abcdefgh", [piece_length: 8, chunk_size: 2])

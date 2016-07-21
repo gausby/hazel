@@ -23,7 +23,7 @@ defmodule Hazel.Torrent.Store.Processes do
     last_piece_length = calc_last_piece_length(opts[:length], opts[:piece_length])
 
     children = [
-      worker(Hazel.Torrent.Store.Processes.Worker,
+      worker(Store.Processes.Worker,
         [peer_id, info_hash, [number_of_pieces: number_of_pieces,
                               piece_length: opts[:piece_length],
                               last_piece_length: last_piece_length,
@@ -81,6 +81,7 @@ defmodule Hazel.Torrent.Store.Processes.Worker do
              manager: nil]
 
   alias __MODULE__, as: State
+  alias Hazel.Torrent
   alias Hazel.Torrent.Store
 
   # Client API =======================================================
@@ -153,7 +154,7 @@ defmodule Hazel.Torrent.Store.Processes.Worker do
                                          info_hash: info_hash,
                                          piece_number: piece_number} = state) do
     # Request peer from swarm that has the given piece
-    Hazel.Torrent.Swarm.request_peer({peer_id, info_hash}, piece_number)
+    Torrent.request_peer({peer_id, info_hash}, piece_number)
     {:next_state, :awaiting_peer, state}
   end
   def disconnected(_, state) do
@@ -221,7 +222,7 @@ defmodule Hazel.Torrent.Store.Processes.Worker do
     if Store.File.validate_piece({state.peer_id, state.info_hash}, state.piece_number) do
       :ok = Store.BitField.have({state.peer_id, state.info_hash}, state.piece_number)
       # should this be handled by the swarm controller?
-      Hazel.Torrent.Swarm.broadcast_piece({state.peer_id, state.info_hash}, state.piece_number)
+      Torrent.broadcast_piece({state.peer_id, state.info_hash}, state.piece_number)
       {:stop, :normal, state}
     else
       # todo: keep track of the chunks that has been written by the

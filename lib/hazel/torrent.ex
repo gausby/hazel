@@ -26,4 +26,8 @@ defmodule Hazel.Torrent do
   end
 
   defdelegate where_is(session), to: Hazel.Torrent.Supervisor
+
+  defdelegate request_peer(session, piece_index), to: Hazel.Torrent.Controller
+
+  defdelegate broadcast_piece(session, piece_index), to: Hazel.Torrent.Controller
 end
