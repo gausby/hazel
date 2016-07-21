@@ -17,4 +17,14 @@ defmodule Hazel.Torrent.Supervisor do
 
     supervise(children, strategy: :one_for_one)
   end
+
+  def where_is(session) do
+    case :gproc.where(supervisor_name(session)) do
+      :undefined ->
+        {:error, :unknown_session}
+
+      pid when is_pid(pid) ->
+        {:ok, pid}
+    end
+  end
 end

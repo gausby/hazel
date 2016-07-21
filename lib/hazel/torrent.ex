@@ -19,9 +19,11 @@ defmodule Hazel.Torrent do
   end
 
   @doc """
-  Add a peer to the a process
+  Add a new torrent for download/upload
   """
   def add(peer_id, info_hash, torrent) do
     Supervisor.start_child(via_name(peer_id), [info_hash, torrent])
   end
+
+  defdelegate where_is(session), to: Hazel.Torrent.Supervisor
 end
