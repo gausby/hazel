@@ -1,7 +1,7 @@
 defmodule Hazel.Acceptor.Handler do
   @behaviour :ranch_protocol
 
-  alias Hazel.{PeerWire, Torrent}
+  alias Hazel.{PeerWire, Torrent, Torrent.Swarm}
 
   def start_link(ref, socket, transport, opts) do
     :proc_lib.start_link(__MODULE__, :init, [ref, socket, transport, opts])
@@ -15,8 +15,10 @@ defmodule Hazel.Acceptor.Handler do
          {:ok, remote_id, info_hash} <- receive_handshake(socket, transport),
          {:ok, _} <- Torrent.where_is({peer_id, info_hash}),
          :ok <- PeerWire.complete_handshake(socket, transport, info_hash, peer_id) do
-      # hand the socket over to the swarm
-      :gen_server.enter_loop(__MODULE__, [], {remote_id, socket, transport})
+      # add peer to the swarm and hand over the socket and transport
+      session = {peer_id, info_hash}
+      {:ok, pid} = Swarm.add_peer(session, remote_id)
+      :ok = Swarm.Peer.handover_socket({session, remote_id}, {transport, socket})
     else
       {:error, :peer_is_blacklisted} ->
         :ignore

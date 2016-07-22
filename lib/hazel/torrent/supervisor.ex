@@ -11,7 +11,7 @@ defmodule Hazel.Torrent.Supervisor do
   def init({peer_id, info_hash, opts}) do
     children = [
       supervisor(Hazel.Torrent.Store, [peer_id, info_hash, opts]),
-      # supervise (Hazel.Torrent.Swarm, [peer_id, info_hash, opts]),
+      supervisor(Hazel.Torrent.Swarm, [peer_id, info_hash, opts]),
       worker(Hazel.Torrent.Controller, [peer_id, info_hash, opts])
     ]
 

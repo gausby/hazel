@@ -41,6 +41,20 @@ defmodule Hazel.AcceptorTest do
   end
 
   describe "handshake" do
+    test "a client should get disconnected when receiving an invalid handshake", context do
+      peer_id = context[:peer_id]
+      info_hash = context[:info_hash]
+
+      :ok = create_torrent_and_add_file(peer_id, info_hash, context[:torrent_file])
+
+      {ip, port} = create_acceptor(peer_id)
+      {:ok, connection} = :gen_tcp.connect(ip, port, active: false)
+
+      :gen_tcp.send(connection, :crypto.strong_rand_bytes(68))
+      # todo, get rid of the ranch warning
+      assert {:error, :closed} = :gen_tcp.recv(connection, 68, 5000)
+    end
+
     test "a client connects and performs a handshake", context do
       peer_id = context[:peer_id]
       info_hash = context[:info_hash]
@@ -55,6 +69,23 @@ defmodule Hazel.AcceptorTest do
 
       assert {:ok, actual_handshake} = :gen_tcp.recv(connection, 68, 5000)
       assert expected_handshake == IO.iodata_to_binary(actual_handshake)
+    end
+  end
+
+  describe "handover" do
+    test "a client should get connected to a swarm", context do
+      peer_id = context[:peer_id]
+      info_hash = context[:info_hash]
+
+      :ok = create_torrent_and_add_file(peer_id, info_hash, context[:torrent_file])
+      {ip, port} = create_acceptor(peer_id)
+      {:ok, connection} = :gen_tcp.connect(ip, port, active: false)
+
+      remote_peer_id = Hazel.generate_peer_id()
+      :gen_tcp.send(connection, create_handshake(remote_peer_id, info_hash))
+      {:ok, _} = :gen_tcp.recv(connection, 68, 5000)
+      {pid, _} = :gproc.await({:n, :l, {Hazel.Torrent.Swarm.Peer, peer_id, info_hash, remote_peer_id}}, 5000)
+      assert is_pid(pid)
     end
   end
 end
