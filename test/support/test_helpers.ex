@@ -1,6 +1,20 @@
 defmodule Hazel.TestHelpers do
   @moduledoc false
 
+  # Create an TCP acceptor and return its IP and port number
+  def create_acceptor(local_id) do
+    Hazel.Acceptor.start_link(local_id, [port: 0])
+    :gproc.await({:n, :l, {Hazel.Acceptor, local_id}})
+    :ranch.get_addr({Hazel.Acceptor, local_id})
+  end
+
+  # Create a valid handshake
+  def create_handshake(<<peer_id::binary-size(20)>>, <<info_hash::binary-size(20)>>, opts \\ []) do
+    protocol = "BitTorrent Protocol"
+    reserved_bytes = Keyword.get(opts, :reserved, <<0, 0, 0, 0, 0, 0, 0, 0>>)
+    [byte_size(protocol), protocol, reserved_bytes, info_hash, peer_id]
+  end
+
   def create_torrent_file(data, opts) when is_binary(data) do
     length = byte_size(data)
     pieces =

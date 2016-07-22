@@ -1,7 +1,10 @@
 defmodule Hazel.AcceptorTest do
   use ExUnit.Case
 
-  import Hazel.TestHelpers, only: [create_torrent_file: 2, encode_torrent_file: 1]
+  import Hazel.TestHelpers, only: [create_torrent_file: 2,
+                                   encode_torrent_file: 1,
+                                   create_acceptor: 1,
+                                   create_handshake: 2]
 
   setup do
     file_data = :crypto.strong_rand_bytes(120)
@@ -15,18 +18,6 @@ defmodule Hazel.AcceptorTest do
       info_hash: info_hash,
       file_data: file_data,
       torrent_file: torrent_file}
-  end
-
-  defp create_handshake(<<peer_id::binary-size(20)>>, <<info_hash::binary-size(20)>>, opts \\ []) do
-    protocol = "BitTorrent Protocol"
-    reserved_bytes = Keyword.get(opts, :reserved, <<0, 0, 0, 0, 0, 0, 0, 0>>)
-    [byte_size(protocol), protocol, reserved_bytes, info_hash, peer_id]
-  end
-
-  defp create_acceptor(local_id) do
-    Hazel.Acceptor.start_link(local_id, [port: 0])
-    :gproc.await({:n, :l, {Hazel.Acceptor, local_id}})
-    :ranch.get_addr({Hazel.Acceptor, local_id})
   end
 
   defp create_torrent_and_add_file(local_id, info_hash, opts) do
