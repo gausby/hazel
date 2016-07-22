@@ -3,12 +3,12 @@ defmodule Hazel.Torrent.Store.Processes do
 
   alias Hazel.Torrent.Store
 
-  def start_link(peer_id, info_hash, opts) do
-    Supervisor.start_link(__MODULE__, {peer_id, info_hash, opts}, name: via_name({peer_id, info_hash}))
+  def start_link(local_id, info_hash, opts) do
+    Supervisor.start_link(__MODULE__, {local_id, info_hash, opts}, name: via_name({local_id, info_hash}))
   end
 
   defp via_name(session), do: {:via, :gproc, processes_name(session)}
-  defp processes_name({peer_id, info_hash}), do: {:n, :l, {__MODULE__, peer_id, info_hash}}
+  defp processes_name({local_id, info_hash}), do: {:n, :l, {__MODULE__, local_id, info_hash}}
 
   def get_piece(session, piece_index) do
     with {:ok, pid} <- who_is(session),
@@ -18,13 +18,13 @@ defmodule Hazel.Torrent.Store.Processes do
     end
   end
 
-  def init({peer_id, info_hash, opts}) do
+  def init({local_id, info_hash, opts}) do
     number_of_pieces = calc_number_of_pieces(opts[:length], opts[:piece_length])
     last_piece_length = calc_last_piece_length(opts[:length], opts[:piece_length])
 
     children = [
       worker(Store.Processes.Worker,
-        [peer_id, info_hash, [number_of_pieces: number_of_pieces,
+        [local_id, info_hash, [number_of_pieces: number_of_pieces,
                               piece_length: opts[:piece_length],
                               last_piece_length: last_piece_length,
                               chunk_size: opts[:chunk_size]]])
@@ -70,7 +70,7 @@ defmodule Hazel.Torrent.Store.Processes.Worker do
   @ideal_chunk_size 16 * 1024
   @type request :: {:request, non_neg_integer, non_neg_integer, non_neg_integer}
 
-  defstruct [peer_id: nil,
+  defstruct [local_id: nil,
              info_hash: nil,
              plan: [],
              awaiting: [],
@@ -85,7 +85,7 @@ defmodule Hazel.Torrent.Store.Processes.Worker do
   alias Hazel.Torrent.Store
 
   # Client API =======================================================
-  def start_link(peer_id, info_hash, piece_info, piece_number) do
+  def start_link(local_id, info_hash, piece_info, piece_number) do
     chunk_size = Keyword.get(piece_info, :chunk_size, @ideal_chunk_size)
     piece_length =
       if piece_number < piece_info[:number_of_pieces],
@@ -94,7 +94,7 @@ defmodule Hazel.Torrent.Store.Processes.Worker do
 
     plan = create_requests(piece_number, piece_length, chunk_size)
     state =
-      %State{peer_id: peer_id,
+      %State{local_id: local_id,
              info_hash: info_hash,
              piece_number: piece_number,
              plan: plan,
@@ -108,8 +108,8 @@ defmodule Hazel.Torrent.Store.Processes.Worker do
   defp via_name(info_hash, piece_number), do: {:via, :gproc, process_name({info_hash, piece_number})}
   defp process_name({info_hash, piece_number}), do: {:n, :l, {__MODULE__, info_hash, piece_number}}
 
-  def announce_peer({info_hash, piece_number}, peer_id) do
-    GenFSM.send_event(via_name(info_hash, piece_number), {:peer, peer_id})
+  def announce_peer({info_hash, piece_number}, peer_pid) when is_pid(peer_pid) do
+    GenFSM.send_event(via_name(info_hash, piece_number), {:peer, peer_pid})
   end
 
   def send_data({info_hash, piece_number}, {offset, data}) do
@@ -150,11 +150,11 @@ defmodule Hazel.Torrent.Store.Processes.Worker do
   # The process is not connected to a peer
   @doc false
   def disconnected(:request_peer, %State{peer: nil,
-                                         peer_id: peer_id,
+                                         local_id: local_id,
                                          info_hash: info_hash,
                                          piece_number: piece_number} = state) do
     # Request peer from swarm that has the given piece
-    Torrent.request_peer({peer_id, info_hash}, piece_number)
+    Torrent.request_peer({local_id, info_hash}, piece_number)
     {:next_state, :awaiting_peer, state}
   end
   def disconnected(_, state) do
@@ -162,10 +162,10 @@ defmodule Hazel.Torrent.Store.Processes.Worker do
   end
 
   @doc false
-  def awaiting_peer({:peer, remote_peer}, %State{peer: nil} = state) do
-    ref = Process.monitor(remote_peer)
+  def awaiting_peer({:peer, peer_pid}, %State{peer: nil} = state) do
+    ref = Process.monitor(peer_pid)
     new_state =
-      %{state|peer: {ref, remote_peer}}
+      %{state|peer: {ref, peer_pid}}
 
     GenFSM.send_event(self, :request_chunks)
     {:next_state, :connected, new_state}
@@ -192,7 +192,7 @@ defmodule Hazel.Torrent.Store.Processes.Worker do
       {:request, state.piece_number, offset, byte_size(data)}
 
     if chunk_request in state.awaiting do
-      :ok = Store.File.write_chunk({state.peer_id, state.info_hash}, state.piece_number, offset, data)
+      :ok = Store.File.write_chunk({state.local_id, state.info_hash}, state.piece_number, offset, data)
 
       new_state =
         %{state|awaiting: state.awaiting -- [chunk_request],
@@ -219,10 +219,10 @@ defmodule Hazel.Torrent.Store.Processes.Worker do
   end
 
   defp what_next(%{plan: [], awaiting: []} = state) do
-    if Store.File.validate_piece({state.peer_id, state.info_hash}, state.piece_number) do
-      :ok = Store.BitField.have({state.peer_id, state.info_hash}, state.piece_number)
+    if Store.File.validate_piece({state.local_id, state.info_hash}, state.piece_number) do
+      :ok = Store.BitField.have({state.local_id, state.info_hash}, state.piece_number)
       # should this be handled by the swarm controller?
-      Torrent.broadcast_piece({state.peer_id, state.info_hash}, state.piece_number)
+      Torrent.broadcast_piece({state.local_id, state.info_hash}, state.piece_number)
       {:stop, :normal, state}
     else
       # todo: keep track of the chunks that has been written by the

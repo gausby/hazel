@@ -2,19 +2,19 @@ defmodule Hazel.TestHelpers.FauxServer do
   use GenServer
 
   # Client API
-  def start_link(peer_id, info_hash, opts \\ []) do
-    opts = Keyword.merge(opts, pid: self, info_hash: info_hash, peer_id: peer_id)
+  def start_link(local_id, info_hash, opts \\ []) do
+    opts = Keyword.merge(opts, pid: self, info_hash: info_hash, peer_id: local_id)
     case Keyword.pop(opts, :mod) do
       {nil, _} ->
         raise ArgumentError, message: "please provide a mod name in the options"
 
       {mod, opts} ->
-        GenServer.start_link(__MODULE__, opts, name: via_name({peer_id, info_hash}, mod))
+        GenServer.start_link(__MODULE__, opts, name: via_name({local_id, info_hash}, mod))
     end
   end
 
   defp via_name(session, mod), do: {:via, :gproc, faux_name(session, mod)}
-  defp faux_name({peer_id, info_hash}, mod), do: {:n, :l, {mod, peer_id, info_hash}}
+  defp faux_name({local_id, info_hash}, mod), do: {:n, :l, {mod, local_id, info_hash}}
 
   # Server callbacks
   def init(state) do

@@ -3,28 +3,28 @@ defmodule Hazel.Supervisor do
 
   use Supervisor
 
-  @type peer_id :: binary
+  @type local_id :: binary
   @type options :: [option]
   @type option ::
     {:port, integer}
 
-  @spec start_link(peer_id, options) ::
+  @spec start_link(local_id, options) ::
     {:ok, pid} |
     :ignore |
     {:error, {:already_started, pid} | {:shutdown, term} | term}
-  def start_link(<<peer_id::binary-size(20)>>, opts \\ []) do
-    Supervisor.start_link(__MODULE__, {peer_id, opts}, name: via_name(peer_id))
+  def start_link(<<local_id::binary-size(20)>>, opts \\ []) do
+    Supervisor.start_link(__MODULE__, {local_id, opts}, name: via_name(local_id))
   end
 
-  defp via_name(peer_id), do: {:via, :gproc, supervisor_name(peer_id)}
-  defp supervisor_name(peer_id), do: {:n, :l, {__MODULE__, peer_id}}
+  defp via_name(local_id), do: {:via, :gproc, supervisor_name(local_id)}
+  defp supervisor_name(local_id), do: {:n, :l, {__MODULE__, local_id}}
 
-  def init({peer_id, opts}) do
+  def init({local_id, opts}) do
     children = [
       # resource manager
-      supervisor(Hazel.Acceptor, [peer_id, opts]),
-      supervisor(Hazel.PeerDiscovery, [peer_id]),
-      supervisor(Hazel.Torrent, [peer_id])
+      supervisor(Hazel.Acceptor, [local_id, opts]),
+      supervisor(Hazel.PeerDiscovery, [local_id]),
+      supervisor(Hazel.Torrent, [local_id])
     ]
     supervise(children, strategy: :one_for_one)
   end

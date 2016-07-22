@@ -20,7 +20,5 @@ defmodule HazelTest do
         |> Enum.filter(fn peer_id -> byte_size(peer_id) == 20 end)
         |> length
     end
-
-    # todo, should peer_id's be human readable?
   end
 end

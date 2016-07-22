@@ -4,9 +4,9 @@ defmodule Hazel.Torrent.Store.BitField do
   (written and verified)
   """
 
-  @type peer_id :: binary
+  @type local_id :: binary
   @type info_hash :: binary
-  @type session :: {peer_id, info_hash}
+  @type session :: {local_id, info_hash}
   @type on_start ::
     {:ok, pid} |
     {:error, {:already_started, pid} | term}
@@ -14,9 +14,9 @@ defmodule Hazel.Torrent.Store.BitField do
   @doc """
   Start and link a process containing a bit field
   """
-  @spec start_link(peer_id, info_hash, Map.t) :: on_start
-  def start_link(peer_id, info_hash, opts) do
-    Agent.start_link(initial_value(info_hash, opts), name: via_name({peer_id, info_hash}))
+  @spec start_link(local_id, info_hash, Map.t) :: on_start
+  def start_link(local_id, info_hash, opts) do
+    Agent.start_link(initial_value(info_hash, opts), name: via_name({local_id, info_hash}))
   end
 
   defp initial_value(info_hash, opts) do
@@ -29,7 +29,7 @@ defmodule Hazel.Torrent.Store.BitField do
   end
 
   defp via_name(session), do: {:via, :gproc, bitfield_name(session)}
-  defp bitfield_name({peer_id, info_hash}), do: {:n, :l, {__MODULE__, peer_id, info_hash}}
+  defp bitfield_name({local_id, info_hash}), do: {:n, :l, {__MODULE__, local_id, info_hash}}
 
   @doc """
   Indicate that we have received the `piece` for the given `info_hash`.

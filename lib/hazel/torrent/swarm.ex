@@ -3,20 +3,20 @@ defmodule Hazel.Torrent.Swarm do
 
   use Supervisor
 
-  @type peer_id :: binary
+  @type local_id :: binary
   @type info_hash :: binary
-  @type session :: {peer_id, info_hash}
+  @type session :: {local_id, info_hash}
 
-  def start_link(peer_id, info_hash, opts) do
-    Supervisor.start_link(__MODULE__, {peer_id, info_hash, opts}, name: via_name({peer_id, info_hash}))
+  def start_link(local_id, info_hash, opts) do
+    Supervisor.start_link(__MODULE__, {local_id, info_hash, opts}, name: via_name({local_id, info_hash}))
   end
 
   defp via_name(session), do: {:via, :gproc, swarm_name(session)}
-  defp swarm_name({peer_id, info_hash}), do: {:n, :l, {__MODULE__, peer_id, info_hash}}
+  defp swarm_name({local_id, info_hash}), do: {:n, :l, {__MODULE__, local_id, info_hash}}
 
-  def init({peer_id, info_hash, _opts}) do
+  def init({local_id, info_hash, _opts}) do
     children = [
-      supervisor(Hazel.Torrent.Swarm.Peer, [peer_id, info_hash])
+      supervisor(Hazel.Torrent.Swarm.Peer, [local_id, info_hash])
     ]
     supervise(children, strategy: :simple_one_for_one)
   end

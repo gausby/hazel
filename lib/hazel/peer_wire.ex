@@ -21,7 +21,7 @@ defmodule Hazel.PeerWire do
     end
   end
 
-  def complete_handshake(socket, transport, info_hash, peer_id) do
-    transport.send(socket, [info_hash, peer_id])
+  def complete_handshake(socket, transport, info_hash, local_id) do
+    transport.send(socket, [info_hash, local_id])
   end
 end

@@ -3,16 +3,16 @@ defmodule Hazel.Torrent do
 
   use Supervisor
 
-  def start_link(peer_id) do
-    Supervisor.start_link(__MODULE__, peer_id, name: via_name(peer_id))
+  def start_link(local_id) do
+    Supervisor.start_link(__MODULE__, local_id, name: via_name(local_id))
   end
 
-  defp via_name(peer_id), do: {:via, :gproc, tracker_name(peer_id)}
-  defp tracker_name(peer_id), do: {:n, :l, {__MODULE__, peer_id}}
+  defp via_name(local_id), do: {:via, :gproc, tracker_name(local_id)}
+  defp tracker_name(local_id), do: {:n, :l, {__MODULE__, local_id}}
 
-  def init(peer_id) do
+  def init(local_id) do
     children = [
-      supervisor(Hazel.Torrent.Supervisor, [peer_id])
+      supervisor(Hazel.Torrent.Supervisor, [local_id])
     ]
 
     supervise(children, strategy: :simple_one_for_one)
@@ -21,8 +21,8 @@ defmodule Hazel.Torrent do
   @doc """
   Add a new torrent for download/upload
   """
-  def add(peer_id, info_hash, torrent) do
-    Supervisor.start_child(via_name(peer_id), [info_hash, torrent])
+  def add(local_id, info_hash, torrent) do
+    Supervisor.start_child(via_name(local_id), [info_hash, torrent])
   end
 
   defdelegate where_is(session), to: Hazel.Torrent.Supervisor
