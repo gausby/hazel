@@ -13,11 +13,11 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
   defp controller_name({local_id, info_hash}, peer_id), do: {:n, :l, {__MODULE__, local_id, info_hash, peer_id}}
 
   def handover_socket(session, {transport, socket} = connection) do
-    case Transmitter.where_is(session) do
+    case Receiver.where_is(session) do
       {:ok, pid} ->
+        :ok = Transmitter.handover_socket(session, connection)
         :ok = transport.controlling_process(socket, pid)
-        :ok = Transmitter.handover_socket(pid, connection)
-        # :ok = Receiver.handover_socket(session, peer_id, connection)
+        :ok = Receiver.handover_socket(pid, connection)
 
       {:error, _reason} = error ->
         error
