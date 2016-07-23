@@ -16,7 +16,7 @@ defmodule Hazel.Mixfile do
   defp elixirc_paths(_),     do: ["lib"]
 
   def application() do
-    [applications: [:logger, :gproc, :ranch, :gen_stage]]
+    [applications: [:logger, :gproc, :ranch, :gen_stage, :gen_state_machine]]
   end
 
   defp deps() do
@@ -24,6 +24,7 @@ defmodule Hazel.Mixfile do
      {:bencode, "~> 0.3.2"},
      {:bit_field_set, "~> 0.1.0"},
      {:gen_fsm, "~> 0.1.0"},
+     {:gen_state_machine, "~> 1.0.0"},
      {:gproc, "~> 0.5.0"},
      {:ranch, "~> 1.2.1"}]
   end

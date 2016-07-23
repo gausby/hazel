@@ -3,5 +3,6 @@
   "eqc_ex": {:hex, :eqc_ex, "1.2.4", "c169c4025e6f59d95977b1d5f3846cd964e996449755d7e9bf6ac6d3a4520839", [:mix], []},
   "gen_fsm": {:hex, :gen_fsm, "0.1.0", "5097308e244e25dbb2aa0ee5b736bb1ab79c3f8ca889a9e5b3aabd8beee6fc88", [:mix], []},
   "gen_stage": {:hex, :gen_stage, "0.3.0", "f3213dd6c8171ddc5a3a458e84a9d84dcaaf3c8c8f9609a5bc9b6137f896e913", [:mix], []},
+  "gen_state_machine": {:hex, :gen_state_machine, "1.0.2", "7fb11ec9e77b90cc9bcc095436a3786592fb243d80ed35c1279dd84153207962", [:mix], []},
   "gproc": {:hex, :gproc, "0.5.0", "2df2d886f8f8a7b81a4b04aa17972b5965bbc5bf0100ea6d8e8ac6a0e7389afe", [:rebar], []},
   "ranch": {:hex, :ranch, "1.2.1", "a6fb992c10f2187b46ffd17ce398ddf8a54f691b81768f9ef5f461ea7e28c762", [:make], []}}

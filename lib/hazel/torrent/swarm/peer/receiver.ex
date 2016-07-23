@@ -1,14 +1,14 @@
 defmodule Hazel.Torrent.Swarm.Peer.Receiver do
   @moduledoc false
 
-  use GenServer
+  use GenStateMachine
 
   defstruct [:socket, :transport]
   alias __MODULE__
 
   # Client API
   def start_link(session, peer_id) do
-    GenServer.start_link(__MODULE__, %Receiver{}, name: via_name({session, peer_id}))
+    GenStateMachine.start_link(__MODULE__, {:awaiting_socket, %Receiver{}}, name: via_name({session, peer_id}))
   end
 
   defp via_name(pid) when is_pid(pid), do: pid
@@ -26,16 +26,11 @@ defmodule Hazel.Torrent.Swarm.Peer.Receiver do
   end
 
   def handover_socket(session, connection) do
-    GenServer.cast(via_name(session), {:connection, connection})
+    GenStateMachine.cast(via_name(session), {:handover, connection})
   end
 
-  # Server callbacks
-  def init(state) do
-    {:ok, state}
-  end
-
-  def handle_cast({:connection, {transport, socket}}, state) do
+  def handle_event(:cast, {:handover, {transport, socket}}, :awaiting_socket, state) do
     new_state = %Receiver{state|transport: transport, socket: socket}
-    {:noreply, new_state}
+    {:next_state, :awaiting_controller, new_state}
   end
 end
