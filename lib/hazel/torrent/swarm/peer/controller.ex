@@ -6,11 +6,11 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
 
   # Client API
   def start_link(session, peer_id) do
-    GenServer.start_link(__MODULE__, peer_id, name: via_name(session, peer_id))
+    GenServer.start_link(__MODULE__, peer_id, name: via_name({session, peer_id}))
   end
 
-  defp via_name(session, peer_id), do: {:via, :gproc, controller_name(session, peer_id)}
-  defp controller_name({local_id, info_hash}, peer_id), do: {:n, :l, {__MODULE__, local_id, info_hash, peer_id}}
+  defp via_name(session), do: {:via, :gproc, controller_name(session)}
+  defp controller_name({{local_id, info_hash}, peer_id}), do: {:n, :l, {__MODULE__, local_id, info_hash, peer_id}}
 
   def handover_socket(session, {transport, socket} = connection) do
     case Receiver.where_is(session) do
@@ -24,8 +24,26 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
     end
   end
 
+  def request_tokens(session, something) do
+    GenServer.cast(via_name(session), {:request_tokens, something})
+  end
+
+  def receive_message(session, message) do
+    GenServer.cast(via_name(session), {:receive, message})
+  end
+
   # Server callbacks
   def init(state) do
     {:ok, state}
+  end
+
+  def handle_cast({:receive, message}, state) do
+    IO.inspect {:received, message}
+    {:noreply, state}
+  end
+
+  def handle_cast({:request_tokens, amount}, state) do
+    IO.inspect {:requesting_tokens, amount}
+    {:noreply, state}
   end
 end
