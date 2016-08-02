@@ -12,9 +12,8 @@ defmodule Hazel.Torrent.Store.Processes do
 
   def get_piece(session, piece_index) do
     with {:ok, pid} <- who_is(session),
-         :ok <- piece_not_available?(session, piece_index),
-         result = Supervisor.start_child(pid, [piece_index]) do
-      result
+         :ok <- piece_not_available?(session, piece_index) do
+      Supervisor.start_child(pid, [piece_index])
     end
   end
 
@@ -102,18 +101,18 @@ defmodule Hazel.Torrent.Store.Processes.Worker do
              completed: [],
              manager: Keyword.get(piece_info, :manager)}
 
-    GenFSM.start_link(__MODULE__, state, name: via_name(info_hash, piece_number))
+    GenFSM.start_link(__MODULE__, state, name: via_name({{local_id, info_hash}, piece_number}))
   end
 
-  defp via_name(info_hash, piece_number), do: {:via, :gproc, process_name({info_hash, piece_number})}
-  defp process_name({info_hash, piece_number}), do: {:n, :l, {__MODULE__, info_hash, piece_number}}
+  defp via_name(session), do: {:via, :gproc, process_name(session)}
+  defp process_name({{local_id, info_hash}, piece_number}), do: {:n, :l, {__MODULE__, local_id, info_hash, piece_number}}
 
-  def announce_peer({info_hash, piece_number}, peer_pid) when is_pid(peer_pid) do
-    GenFSM.send_event(via_name(info_hash, piece_number), {:peer, peer_pid})
+  def announce_peer({session, piece_number}, peer_pid) when is_pid(peer_pid) do
+    GenFSM.send_event(via_name({session, piece_number}), {:peer, peer_pid})
   end
 
-  def send_data({info_hash, piece_number}, {offset, data}) do
-    GenFSM.send_event(via_name(info_hash, piece_number), {:retrieving, offset, data})
+  def write_chunk(session, piece_number, offset, data) do
+    GenFSM.send_event(via_name({session, piece_number}), {:retrieving, offset, data})
   end
 
   #=Server callbacks =================================================

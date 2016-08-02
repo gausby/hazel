@@ -27,6 +27,8 @@ defmodule Hazel.Torrent.Store do
 
   defdelegate get_piece(session, piece_index), to: Store.Processes
 
+  defdelegate write_chunk(session, piece_index, offset, data), to: Store.Processes.Worker
+
   defdelegate get_chunk(session, piece_index, offset, length), to: Store.File
 
   defdelegate available(session), to: Store.BitField

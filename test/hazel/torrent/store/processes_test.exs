@@ -3,14 +3,14 @@ defmodule PeerMock do
 
   alias Hazel.Torrent.Store
 
-  defstruct info_hash: nil, requests: []
+  defstruct session: nil, requests: []
 
   # Client API
-  def start_link(info_hash) do
-    GenServer.start_link(__MODULE__, %PeerMock{info_hash: info_hash})
+  def start_link({_local_id, _info_hash} = session) do
+    GenServer.start_link(__MODULE__, %PeerMock{session: session})
   end
-  def start(info_hash) do
-    GenServer.start(__MODULE__, %PeerMock{info_hash: info_hash})
+  def start({_local_id, _info_hash} = session) do
+    GenServer.start(__MODULE__, %PeerMock{session: session})
   end
 
   def send_data(pid, piece_index, offset, data) do
@@ -35,7 +35,7 @@ defmodule PeerMock do
   end
 
   def handle_cast({:piece, piece_index, offset, data}, state) do
-    Store.Processes.Worker.send_data({state.info_hash, piece_index}, {offset, data})
+    Store.write_chunk(state.session, piece_index, offset, data)
     {:noreply, state}
   end
 
@@ -81,8 +81,9 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     assert_receive {:got_request, 0}
     # When a peer is introduced to the swarm and then removed it
     # should request a new peer
-    {:ok, peer_pid} = PeerMock.start_link(info_hash)
-    Store.Processes.Worker.announce_peer({info_hash, 0}, peer_pid)
+    session = {local_id, info_hash}
+    {:ok, peer_pid} = PeerMock.start_link(session)
+    Store.Processes.Worker.announce_peer({session, 0}, peer_pid)
     PeerMock.stop(peer_pid)
     assert_receive {:got_request, 0}
   end
@@ -104,11 +105,12 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     Store.Processes.get_piece({local_id, info_hash}, 0)
     assert_receive {:got_request, 0}
 
-    {:ok, peer_pid} = PeerMock.start_link(info_hash)
-    :ok = Store.Processes.Worker.announce_peer({info_hash, 0}, peer_pid)
+    session = {local_id, info_hash}
+    {:ok, peer_pid} = PeerMock.start_link(session)
+    :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid)
     :ok = PeerMock.send_data(peer_pid, 0, 0, "ab")
     :timer.sleep 100
-    assert {:ok, "ab"} = Hazel.Torrent.Store.File.get_chunk({local_id, info_hash}, 0, 0, 2)
+    assert {:ok, "ab"} = Hazel.Torrent.Store.File.get_chunk(session, 0, 0, 2)
   end
 
   test "should send \"have\" to the controller when piece is complete and verified",
@@ -133,8 +135,9 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     assert_receive {:got_request, 0}
 
     # create peer, announce it, and send data
-    {:ok, peer_pid} = PeerMock.start_link(info_hash)
-    :ok = Store.Processes.Worker.announce_peer({info_hash, 0}, peer_pid)
+    session = {local_id, info_hash}
+    {:ok, peer_pid} = PeerMock.start_link(session)
+    :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid)
     PeerMock.send_data(peer_pid, 0, 0, "abcd")
     PeerMock.send_data(peer_pid, 0, 4, "efgh")
     # the manager should receive a note about us having the piece, and
@@ -167,15 +170,16 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     assert_receive {:got_request, 0}
 
     # create peer, announce it, and send incorrect data
-    {:ok, peer_pid} = PeerMock.start_link(info_hash)
-    :ok = Store.Processes.Worker.announce_peer({info_hash, 0}, peer_pid)
+    session = {local_id, info_hash}
+    {:ok, peer_pid} = PeerMock.start_link(session)
+    :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid)
     PeerMock.send_data(peer_pid, 0, 0, "abdcefhg")
     refute_receive {:broadcast_piece, 0}
     assert_receive {:got_request, 0}
 
     # create a new peer, announce it and send the correct data
-    {:ok, peer_pid2} = PeerMock.start_link(info_hash)
-    :ok = Store.Processes.Worker.announce_peer({info_hash, 0}, peer_pid2)
+    {:ok, peer_pid2} = PeerMock.start_link(session)
+    :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid2)
 
     PeerMock.send_data(peer_pid2, 0, 0, "abcdefgh")
     assert_receive {:broadcast_piece, 0}
@@ -201,8 +205,9 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     assert_receive {:got_request, 0}
 
     # create peer, announce it, and send incorrect data
-    {:ok, peer_pid} = PeerMock.start(info_hash)
-    :ok = Store.Processes.Worker.announce_peer({info_hash, 0}, peer_pid)
+    session = {local_id, info_hash}
+    {:ok, peer_pid} = PeerMock.start(session)
+    :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid)
     PeerMock.send_data(peer_pid, 0, 0, "ab")
     PeerMock.send_data(peer_pid, 0, 2, "cd")
     :timer.sleep 100
@@ -210,8 +215,8 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     assert_receive {:got_request, 0}
 
     # create a new peer, announce it and send the correct data
-    {:ok, peer_pid2} = PeerMock.start_link(info_hash)
-    :ok = Store.Processes.Worker.announce_peer({info_hash, 0}, peer_pid2)
+    {:ok, peer_pid2} = PeerMock.start_link(session)
+    :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid2)
     PeerMock.send_data(peer_pid2, 0, 4, "ef")
     PeerMock.send_data(peer_pid2, 0, 6, "gh")
 
