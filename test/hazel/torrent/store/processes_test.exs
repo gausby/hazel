@@ -57,27 +57,27 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
 
   setup do
     context =
-      %{peer_id: Hazel.generate_peer_id(),
+      %{local_id: Hazel.generate_peer_id(),
         info_hash: :crypto.strong_rand_bytes(20)}
 
     {:ok, context}
   end
 
-  test "should request peers when disconnected", %{peer_id: peer_id, info_hash: info_hash} do
+  test "should request peers when disconnected", %{local_id: local_id, info_hash: info_hash} do
     parent = self
     request_peer_cb = fn
       piece_index, _state -> send parent, {:got_request, piece_index}
     end
     {:ok, _pid} =
-      FauxServer.start_link(peer_id, info_hash,
+      FauxServer.start_link(local_id, info_hash,
         [mod: Hazel.Torrent.Controller,
          cb: %{request_peer: request_peer_cb}])
 
     %{processes: _processes_pid} =
-      create_processes(peer_id, info_hash, "foobar", [piece_length: 3])
+      create_processes(local_id, info_hash, "foobar", [piece_length: 3])
 
     # Ask for piece, should ask the swarm for peers
-    Store.Processes.get_piece({peer_id, info_hash}, 0)
+    Store.Processes.get_piece({local_id, info_hash}, 0)
     assert_receive {:got_request, 0}
     # When a peer is introduced to the swarm and then removed it
     # should request a new peer
@@ -87,32 +87,32 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     assert_receive {:got_request, 0}
   end
 
-  test "should be able to receive data when connected", %{peer_id: peer_id, info_hash: info_hash} do
+  test "should be able to receive data when connected", %{local_id: local_id, info_hash: info_hash} do
     parent = self
     request_peer_cb = fn piece_index, _state ->
       send parent, {:got_request, piece_index}
     end
     {:ok, _pid} =
-      FauxServer.start_link(peer_id, info_hash,
+      FauxServer.start_link(local_id, info_hash,
         [mod: Hazel.Torrent.Controller,
          cb: %{request_peer: request_peer_cb}])
 
     %{processes: _processes_pid} =
-      create_processes(peer_id, info_hash, "abcdefgh", [piece_length: 2])
+      create_processes(local_id, info_hash, "abcdefgh", [piece_length: 2])
 
     # Ask for piece, should ask the swarm for peers
-    Store.Processes.get_piece({peer_id, info_hash}, 0)
+    Store.Processes.get_piece({local_id, info_hash}, 0)
     assert_receive {:got_request, 0}
 
     {:ok, peer_pid} = PeerMock.start_link(info_hash)
     :ok = Store.Processes.Worker.announce_peer({info_hash, 0}, peer_pid)
     :ok = PeerMock.send_data(peer_pid, 0, 0, "ab")
     :timer.sleep 100
-    assert {:ok, "ab"} = Hazel.Torrent.Store.File.get_chunk({peer_id, info_hash}, 0, 0, 2)
+    assert {:ok, "ab"} = Hazel.Torrent.Store.File.get_chunk({local_id, info_hash}, 0, 0, 2)
   end
 
   test "should send \"have\" to the controller when piece is complete and verified",
-    %{peer_id: peer_id, info_hash: info_hash} do
+    %{local_id: local_id, info_hash: info_hash} do
     parent = self()
     request_peer_cb = fn piece_index, _state ->
       send parent, {:got_request, piece_index}
@@ -121,15 +121,15 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
       send parent, {:broadcast_piece, piece_index}
     end
     {:ok, _pid} =
-      FauxServer.start_link(peer_id, info_hash,
+      FauxServer.start_link(local_id, info_hash,
         [mod: Hazel.Torrent.Controller,
          cb: %{request_peer: request_peer_cb,
                broadcast_piece: broadcast_piece_cb}])
 
-    %{} = create_processes(peer_id, info_hash, "abcdefgh", [piece_length: 8, chunk_size: 4])
+    %{} = create_processes(local_id, info_hash, "abcdefgh", [piece_length: 8, chunk_size: 4])
 
     # Ask for piece, should ask the swarm for peers
-    {:ok, pid} = Store.Processes.get_piece({peer_id, info_hash}, 0)
+    {:ok, pid} = Store.Processes.get_piece({local_id, info_hash}, 0)
     assert_receive {:got_request, 0}
 
     # create peer, announce it, and send data
@@ -145,7 +145,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
   end
 
   test "should fetch data from another peer if data is invalid",
-    %{peer_id: peer_id, info_hash: info_hash} do
+    %{local_id: local_id, info_hash: info_hash} do
     parent = self()
     request_peer_cb = fn piece_index, _state ->
       send parent, {:got_request, piece_index}
@@ -154,16 +154,16 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
       send parent, {:broadcast_piece, piece_index}
     end
     {:ok, _pid} =
-      FauxServer.start_link(peer_id, info_hash,
+      FauxServer.start_link(local_id, info_hash,
         [mod: Hazel.Torrent.Controller,
          cb: %{request_peer: request_peer_cb,
                broadcast_piece: broadcast_piece_cb}])
 
 
-    %{} = create_processes(peer_id, info_hash, "abcdefgh", [piece_length: 8, chunk_size: 8])
+    %{} = create_processes(local_id, info_hash, "abcdefgh", [piece_length: 8, chunk_size: 8])
 
     # Ask for piece, should ask the swarm for peers
-    {:ok, _pid} = Store.Processes.get_piece({peer_id, info_hash}, 0)
+    {:ok, _pid} = Store.Processes.get_piece({local_id, info_hash}, 0)
     assert_receive {:got_request, 0}
 
     # create peer, announce it, and send incorrect data
@@ -182,22 +182,22 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
   end
 
   test "should continue fetching data from another peer if connection is dropped",
-    %{peer_id: peer_id, info_hash: info_hash} do
+    %{local_id: local_id, info_hash: info_hash} do
     parent = self()
     request_peer_cb =
       fn piece_index, _state -> send parent, {:got_request, piece_index} end
     broadcast_piece_cb =
       fn piece_index, _state -> send parent, {:broadcast_piece, piece_index} end
     {:ok, _pid} =
-      FauxServer.start_link(peer_id, info_hash,
+      FauxServer.start_link(local_id, info_hash,
         [mod: Hazel.Torrent.Controller,
          cb: %{request_peer: request_peer_cb,
                broadcast_piece: broadcast_piece_cb}])
 
-    %{} = create_processes(peer_id, info_hash, "abcdefgh", [piece_length: 8, chunk_size: 2])
+    %{} = create_processes(local_id, info_hash, "abcdefgh", [piece_length: 8, chunk_size: 2])
 
     # Ask for piece, should ask the swarm for peers
-    {:ok, pid} = Store.Processes.get_piece({peer_id, info_hash}, 0)
+    {:ok, pid} = Store.Processes.get_piece({local_id, info_hash}, 0)
     assert_receive {:got_request, 0}
 
     # create peer, announce it, and send incorrect data
@@ -221,7 +221,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
   end
 
   # HELPERS ----------------------------------------------------------
-  defp create_processes(peer_id, info_hash, data, opts) do
+  defp create_processes(local_id, info_hash, data, opts) do
     hashes =
       for piece <- split_pieces(data, opts[:piece_length]),
         do: :crypto.hash(:sha, piece)
@@ -231,11 +231,11 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
       Keyword.merge(opts, name: :ram, pieces: IO.iodata_to_binary(hashes))
 
     {:ok, file_pid} =
-      Store.File.start_link(peer_id, info_hash, file_opts)
+      Store.File.start_link(local_id, info_hash, file_opts)
     {:ok, bitfield_pid} =
-      Store.BitField.start_link(peer_id, info_hash, opts)
+      Store.BitField.start_link(local_id, info_hash, opts)
     {:ok, processes_pid} =
-      Store.Processes.start_link(peer_id, info_hash, opts)
+      Store.Processes.start_link(local_id, info_hash, opts)
 
     %{hashes: hashes,
       file: file_pid,
