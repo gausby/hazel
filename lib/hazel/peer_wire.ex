@@ -2,12 +2,25 @@ defmodule Hazel.PeerWire do
   @protocol "BitTorrent Protocol"
   @protocol_length byte_size(@protocol)
 
-  @local_capabilities <<0, 0, 0, 0, 0, 0, 0, 0>>
+  @choke 0
+  @unchoke 1
+  @interested 2
+  @not_interested 3
+  @have 4
+  @bitfield 5
+  @request 6
+  @piece 7
+  @cancel 8
+
+  @type piece_index :: non_neg_integer
+  @type byte_length :: non_neg_integer
+  @type offset :: non_neg_integer
 
   defp protocol_header(capabilities) do
     [@protocol_length, @protocol, capabilities]
   end
 
+  @local_capabilities <<0, 0, 0, 0, 0, 0, 0, 0>>
   def receive_handshake(socket, transport) do
     # send as much as possible (the header) to the remote
     initial_handshake = protocol_header(@local_capabilities)
@@ -23,5 +36,43 @@ defmodule Hazel.PeerWire do
 
   def complete_handshake(socket, transport, info_hash, local_id) do
     transport.send(socket, [info_hash, local_id])
+  end
+
+  @spec decode(binary) ::
+    :awake | {:choke, boolean} | {:interest, boolean} |
+    {:bit_field, binary} |
+    {:have, non_neg_integer} |
+    {:request | :cancel, piece_index, offset, byte_length} |
+    {:piece, piece_index, offset, block :: binary}
+  def decode(<<0::big-size(32)>>), do: :awake
+  def decode(<<_::big-size(32), message::binary>>) do
+    case message do
+      <<@choke>> ->
+        {:choke, true}
+
+      <<@unchoke>> ->
+        {:choke, false}
+
+      <<@interested>> ->
+        {:interest, true}
+
+      <<@not_interested>> ->
+        {:interest, false}
+
+      <<@have, piece_index::big-size(32)>> ->
+        {:have, piece_index}
+
+      <<@bitfield, bit_field::binary>> ->
+        {:bit_field, bit_field}
+
+      <<@request, index::big-size(32), offset::big-size(32), byte_length::big-size(32)>> ->
+        {:request, index, offset, byte_length}
+
+      <<@piece, index::big-size(32), offset::big-size(32), block::binary>> ->
+        {:piece, index, offset, block}
+
+      <<@cancel, index::big-size(32), offset::big-size(32), byte_length::big-size(32)>> ->
+        {:cancel, index, offset, byte_length}
+    end
   end
 end

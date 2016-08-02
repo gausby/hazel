@@ -38,7 +38,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
   end
 
   def handle_cast({:receive, message}, state) do
-    IO.inspect {:received, message}
+    IO.inspect Hazel.PeerWire.decode(message)
     {:noreply, state}
   end
 
