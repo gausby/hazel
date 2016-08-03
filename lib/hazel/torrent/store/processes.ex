@@ -11,7 +11,7 @@ defmodule Hazel.Torrent.Store.Processes do
   defp processes_name({local_id, info_hash}), do: {:n, :l, {__MODULE__, local_id, info_hash}}
 
   def get_piece(session, piece_index) do
-    with {:ok, pid} <- who_is(session),
+    with {:ok, pid} <- where_is(session),
          :ok <- piece_not_available?(session, piece_index) do
       Supervisor.start_child(pid, [piece_index])
     end
@@ -46,7 +46,7 @@ defmodule Hazel.Torrent.Store.Processes do
     div(length, piece_length) + (if rem(length, piece_length) == 0, do: 0, else: 1)
   end
 
-  defp who_is(session) do
+  defp where_is(session) do
     case :gproc.where(processes_name(session)) do
       pid when is_pid(pid) ->
         {:ok, pid}
