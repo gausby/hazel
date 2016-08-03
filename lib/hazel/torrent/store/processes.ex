@@ -18,15 +18,16 @@ defmodule Hazel.Torrent.Store.Processes do
   end
 
   def init({local_id, info_hash, opts}) do
-    number_of_pieces = calc_number_of_pieces(opts[:length], opts[:piece_length])
-    last_piece_length = calc_last_piece_length(opts[:length], opts[:piece_length])
+    piece_length = opts[:piece_length]
+    number_of_pieces = calc_number_of_pieces(opts[:length], piece_length)
+    last_piece_length = calc_last_piece_length(opts[:length], piece_length)
 
     children = [
       worker(Store.Processes.Worker,
         [local_id, info_hash, [number_of_pieces: number_of_pieces,
-                              piece_length: opts[:piece_length],
-                              last_piece_length: last_piece_length,
-                              chunk_size: opts[:chunk_size]]])
+                               piece_length: piece_length,
+                               last_piece_length: last_piece_length,
+                               chunk_size: opts[:chunk_size]]])
     ]
 
     supervise(children, strategy: :simple_one_for_one)
