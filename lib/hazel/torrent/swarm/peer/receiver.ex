@@ -57,18 +57,17 @@ defmodule Hazel.Torrent.Swarm.Peer.Receiver do
 
   def handle_event(:cast, {:add_tokens, tokens}, _, state) do
     status = Allowance.set_tokens(state.status, tokens)
-    next_event = [{:next_event, :cast, :consume}]
+    next_event = [{:next_event, :internal, :consume}]
     {:keep_state, %{state|status: status}, next_event}
   end
 
   def handle_event(:internal, :reset, :consume_length, state) do
-    {:reseting, state.status}
     status = Allowance.set_remaining(state.status, 4)
-    next_event = [{:next_event, :cast, :consume}]
+    next_event = [{:next_event, :internal, :consume}]
     {:keep_state, %{state|status: status}, next_event}
   end
 
-  def handle_event(:cast, :consume, :consume_length, state) do
+  def handle_event(:internal, :consume, :consume_length, state) do
     case consume_bytes(state, @length_timeout) do
       # zero length message (awake)
       {:ok, {{<<0, 0, 0, 0>>, 0}, _} = status} ->
@@ -80,7 +79,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Receiver do
       # got a length, start receiving message
       {:ok, {{<<len::big-integer-size(32)>>, 0}, _} = status} ->
         updated_state = Allowance.set_remaining(status, len)
-        next_action = {:next_event, :cast, :consume}
+        next_action = {:next_event, :internal, :consume}
         {:next_state, :consume_message, %{state|status: updated_state}, next_action}
 
       # ran out of tokens, ask for more
@@ -94,7 +93,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Receiver do
     end
   end
 
-  def handle_event(:cast, :consume, :consume_message, state) do
+  def handle_event(:internal, :consume, :consume_message, state) do
     case consume_bytes(state, @message_timeout) do
       # done consuming message, emit and reset
       {:ok, {{_, 0}, _} = status} ->
@@ -111,7 +110,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Receiver do
 
       # message is partially done, consume more
       {:ok, status} ->
-        next_action = {:next_event, :cast, :consume}
+        next_action = {:next_event, :internal, :consume}
         {:keep_state, %{state|status: status}, next_action}
 
       {:error, reason} ->
@@ -121,6 +120,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Receiver do
 
   #=HELPERS ==========================================================
   defp consume_bytes(%{status: {_continuation, 0} = state}, _timeout) do
+    # we ran out of tokens
     {:ok, state}
   end
   defp consume_bytes(%{status: status} = state, timeout) do
