@@ -16,8 +16,12 @@ defmodule Hazel.Torrent.Swarm.Peer.Receiver do
 
   # Client API
   def start_link(session, peer_id) do
-    initial_state = {:awaiting_socket, %Peer.Receiver{session: {session, peer_id}}}
-    GenStateMachine.start_link(__MODULE__, initial_state, name: via_name({session, peer_id}))
+    session_ref = {session, peer_id}
+    GenStateMachine.start_link(__MODULE__, session_ref, name: via_name(session_ref))
+  end
+
+  def init({session, peer_id}) do
+    {:ok, :awaiting_socket, %__MODULE__{session: {session, peer_id}}}
   end
 
   defp via_name(pid) when is_pid(pid), do: pid
