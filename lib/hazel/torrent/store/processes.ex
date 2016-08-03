@@ -58,7 +58,7 @@ defmodule Hazel.Torrent.Store.Processes do
   end
 
   defp piece_not_available?(session, piece_index) do
-    if Store.BitField.has?(session, piece_index),
+    if Store.has?(session, piece_index),
       do: {:error, :requested_piece_is_already_available},
       else: :ok
   end

@@ -32,4 +32,6 @@ defmodule Hazel.Torrent.Store do
   defdelegate get_chunk(session, piece_index, offset, length), to: Store.File
 
   defdelegate available(session), to: Store.BitField
+
+  defdelegate has?(session, piece_index), to: Store.BitField
 end
