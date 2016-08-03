@@ -105,8 +105,8 @@ defmodule Hazel.Torrent.Swarm.Peer.Receiver do
       # ran out of tokens, ask for more
       {:ok, {_continuation, 0} = status} ->
         new_state = %{state|status: status}
-        :ok = request_tokens(state)
-        {:next_state, :consume_message, new_state}
+        :ok = request_tokens(new_state)
+        {:keep_state, new_state}
 
       # message is partially done, consume more
       {:ok, status} ->
