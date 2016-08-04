@@ -78,33 +78,5 @@ defmodule Hazel.AcceptorTest do
       {pid, _} = :gproc.await({:n, :l, {Hazel.Torrent.Swarm.Peer, local_id, info_hash, peer_id}}, 5000)
       assert is_pid(pid)
     end
-
-    test "temporary receiver test", context do
-      local_id = context[:peer_id]
-      info_hash = context[:info_hash]
-
-      :ok = create_torrent_and_add_file(local_id, info_hash, context[:torrent_file])
-      {ip, port} = create_acceptor(local_id)
-      {:ok, connection} = :gen_tcp.connect(ip, port, active: false)
-
-      peer_id = Hazel.generate_peer_id()
-      :gen_tcp.send(connection, create_handshake(peer_id, info_hash))
-      {:ok, _} = :gen_tcp.recv(connection, 68, 5000)
-      {_pid, _} = :gproc.await({:n, :l, {Hazel.Torrent.Swarm.Peer, local_id, info_hash, peer_id}}, 5000)
-
-      :timer.sleep 100
-
-      session = {{local_id, info_hash}, peer_id}
-
-      :gen_tcp.send(connection, <<0,0,0,0>>)
-      :gen_tcp.send(connection, <<0,0,0,1,2>>)
-      Hazel.Torrent.Swarm.Peer.Receiver.add_tokens(session, 9)
-      :gen_tcp.send(connection, <<0,0,0,0>>)
-      :gen_tcp.send(connection, <<0,0,0,0>>)
-      Hazel.Torrent.Swarm.Peer.Receiver.add_tokens(session, 12)
-      :gen_tcp.send(connection, <<0,0,0,1,2>>)
-      Hazel.Torrent.Swarm.Peer.Receiver.add_tokens(session, 1)
-      :timer.sleep 100
-    end
   end
 end
