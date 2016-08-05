@@ -25,6 +25,10 @@ defmodule Hazel.Torrent.Swarm.Peer.ReceiverTest do
     :gen_tcp.connect(ip, port, active: false)
   end
 
+  defp peer_controller_via_name({{local_id, info_hash}, peer_id}) do
+    {Controller, local_id, info_hash, peer_id}
+  end
+
   test "starting a receiver" do
     session = generate_session()
     {:ok, pid} = start_receiver(session)
@@ -32,11 +36,11 @@ defmodule Hazel.Torrent.Swarm.Peer.ReceiverTest do
   end
 
   test "receiving an await message" do
-    {{local_id, info_hash}, peer_id} = session = generate_session()
+    session = generate_session()
     {:ok, receiver_pid} = start_receiver(session)
 
     Hazel.TestHelpers.FauxServerDeux.start_link(
-      {Controller, local_id, info_hash, peer_id},
+      peer_controller_via_name(session),
       [receiver_pid: receiver_pid, cb:
        [request_tokens:
         fn _, state ->
@@ -50,9 +54,31 @@ defmodule Hazel.Torrent.Swarm.Peer.ReceiverTest do
        ]])
 
     {:ok, client} = create_and_attach_client_to_receiver(receiver_pid)
-
     assert :ok = :gen_tcp.send(client, <<0,0,0,0>>)
     assert_receive <<0,0,0,0>>
+  end
+
+  test "receiving a bunch of messages in a row" do
+    session = generate_session()
+    {:ok, receiver_pid} = start_receiver(session)
+
+    Hazel.TestHelpers.FauxServerDeux.start_link(
+      peer_controller_via_name(session),
+      [receiver_pid: receiver_pid, cb:
+       [request_tokens:
+        fn _, state -> Receiver.add_tokens(state[:receiver_pid], 300) end,
+
+        receive:
+        fn message, state -> send state[:pid], message end
+       ]])
+
+    messages = [<<0,0,0,1,0>>, <<0,0,0,1,1>>,
+                <<0,0,0,1,2>>, <<0,0,0,1,3>>,
+                <<0,0,0,1,4>>]
+
+    {:ok, client} = create_and_attach_client_to_receiver(receiver_pid)
+    assert :ok = :gen_tcp.send(client, IO.iodata_to_binary(messages))
+    for message <- messages, do: assert_receive ^message
   end
 end
 
