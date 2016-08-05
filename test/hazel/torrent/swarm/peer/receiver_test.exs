@@ -43,13 +43,14 @@ defmodule Hazel.Torrent.Swarm.Peer.ReceiverTest do
       peer_controller_via_name(session),
       [receiver_pid: receiver_pid, cb:
        [request_tokens:
-        fn _, state ->
-          Receiver.add_tokens(state[:receiver_pid], 4)
+        fn _message, state ->
+          :ok = Receiver.add_tokens(state[:receiver_pid], 4)
         end,
 
         receive:
         fn <<0,0,0,0>> = message, state ->
           send state[:pid], message
+          :ok
         end
        ]])
 
@@ -66,10 +67,15 @@ defmodule Hazel.Torrent.Swarm.Peer.ReceiverTest do
       peer_controller_via_name(session),
       [receiver_pid: receiver_pid, cb:
        [request_tokens:
-        fn _, state -> Receiver.add_tokens(state[:receiver_pid], 300) end,
+        fn _, state ->
+          :ok = Receiver.add_tokens(state[:receiver_pid], 300)
+        end,
 
         receive:
-        fn message, state -> send state[:pid], message end
+        fn message, state ->
+          send state[:pid], message
+          :ok
+        end
        ]])
 
     messages = [<<0,0,0,1,0>>, <<0,0,0,1,1>>,
@@ -79,6 +85,44 @@ defmodule Hazel.Torrent.Swarm.Peer.ReceiverTest do
     {:ok, client} = create_and_attach_client_to_receiver(receiver_pid)
     assert :ok = :gen_tcp.send(client, IO.iodata_to_binary(messages))
     for message <- messages, do: assert_receive ^message
+  end
+
+  test "should not receive after running out of tokens" do
+    session = generate_session()
+    {:ok, receiver_pid} = start_receiver(session)
+
+    Hazel.TestHelpers.FauxServerDeux.start_link(
+      peer_controller_via_name(session),
+      [receiver_pid: receiver_pid, tokens: 10, cb:
+       [request_tokens:
+        fn
+          _, state ->
+            tokens = state[:tokens]
+            if (tokens > 0) do
+              # give enough tokens to receive a message
+              Receiver.add_tokens(state[:receiver_pid], 5)
+              {:ok, Keyword.put(state, :tokens, tokens - 5)}
+            else
+              :ok
+            end
+        end,
+
+        receive:
+        fn message, state ->
+          send state[:pid], message
+          :ok
+        end
+       ]])
+
+    messages = [<<0,0,0,1,0>>, <<0,0,0,1,1>>, <<0,0,0,1,2>>]
+
+    {:ok, client} = create_and_attach_client_to_receiver(receiver_pid)
+    assert :ok = :gen_tcp.send(client, IO.iodata_to_binary(messages))
+
+    {received_messages, non_received_messages} = Enum.split(messages, 2)
+    for message <- received_messages, do: assert_receive ^message
+    should_not_receive = hd non_received_messages
+    refute_receive ^should_not_receive
   end
 end
 
@@ -135,18 +179,33 @@ defmodule Hazel.TestHelpers.FauxServerDeux do
 
   def handle_cast(message, state) do
     [command|args] = Tuple.to_list(message)
-    if is_function(state[:cb][command]) do
-      apply(state[:cb][command], args ++ [Keyword.delete(state, :cb)])
-    end
-    {:noreply, state}
+    new_state =
+      if is_function(state[:cb][command]) do
+        case apply(state[:cb][command], args ++ [state]) do
+          {:ok, state} when is_list(state) ->
+            state
+
+          :ok ->
+            state
+
+          _ ->
+            raise ArgumentError,
+              message: "should return `{:ok, state}`-tuple or just `:ok`"
+        end
+      else
+        state
+      end
+
+    {:noreply, new_state}
   end
 
   def handle_call(message, _from, state) do
+    # todo, fix handle_calls
     [command|args] = Tuple.to_list(message)
-    reply =
+    {reply, new_state} =
       if is_function(state[:cb][command]) do
-        apply(state[:cb][command], args ++ [Keyword.delete(state, :cb)])
+        apply(state[:cb][command], args ++ [state])
       end
-    {:reply, reply, state}
+    {:reply, reply, new_state}
   end
 end
