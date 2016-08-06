@@ -12,6 +12,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
     GenServer.start_link(__MODULE__, opts, name: via_name(session_id))
   end
 
+  defp via_name(pid) when is_pid(pid), do: pid
   defp via_name(session), do: {:via, :gproc, controller_name(session)}
   defp controller_name({{local_id, info_hash}, peer_id}), do: {:n, :l, {__MODULE__, local_id, info_hash, peer_id}}
 
@@ -41,9 +42,11 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
 
   # Server callbacks
   def init(opts) do
-    {{_local_id, info_hash}, _peer_id} = opts[:session]
-    {:ok, bit_field} = BitFieldSet.new(<<>>, opts[:number_of_pieces], info_hash)
-    {:ok, %__MODULE__{session: opts[:session], bit_field: bit_field}}
+    with {{local_id, info_hash}, _peer_id} = opts[:session],
+         {:ok, bit_field_size} = Store.bit_field_size({local_id, info_hash}),
+         {:ok, bit_field} = BitFieldSet.new(<<>>, bit_field_size, info_hash) do
+      {:ok, %__MODULE__{session: opts[:session], bit_field: bit_field}}
+    end
   end
 
   def handle_cast({:request_tokens, _pid}, state) do

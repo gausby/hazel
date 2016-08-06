@@ -20,16 +20,24 @@ defmodule Hazel.Torrent.Store.BitField do
   end
 
   defp initial_value(info_hash, opts) do
-    size = bitfield_size(opts[:length], opts[:piece_length])
+    size = calc_bitfield_size(opts[:length], opts[:piece_length])
     fn -> BitFieldSet.new!(<<>>, size, info_hash) end
   end
 
-  defp bitfield_size(length, piece_length) do
+  defp calc_bitfield_size(length, piece_length) do
     div(length, piece_length) + (if rem(length, piece_length) == 0, do: 0, else: 1)
   end
 
   defp via_name(session), do: {:via, :gproc, bitfield_name(session)}
   defp bitfield_name({local_id, info_hash}), do: {:n, :l, {__MODULE__, local_id, info_hash}}
+
+  @doc """
+  Return the size of the bit field
+  """
+  @spec bit_field_size(session) :: non_neg_integer
+  def bit_field_size(session) do
+    Agent.get(via_name(session), &({:ok, &1.size}))
+  end
 
   @doc """
   Indicate that we have received the `piece` for the given `info_hash`.

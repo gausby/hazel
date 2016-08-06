@@ -33,5 +33,7 @@ defmodule Hazel.Torrent.Store do
 
   defdelegate available(session), to: Store.BitField
 
+  defdelegate bit_field_size(session), to: Store.BitField
+
   defdelegate has?(session, piece_index), to: Store.BitField
 end
