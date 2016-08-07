@@ -36,6 +36,10 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
     GenServer.cast(via_name(session), {:receive, message})
   end
 
+  def status(session) do
+    GenServer.call(via_name(session), :get_status)
+  end
+
   defstruct [interesting?: false, peer_interested?: false,
              choking?: true, peer_choking?: true,
              bit_field: nil, session: nil]
@@ -47,6 +51,10 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
          {:ok, bit_field} = BitFieldSet.new(<<>>, bit_field_size, info_hash) do
       {:ok, %__MODULE__{session: opts[:session], bit_field: bit_field}}
     end
+  end
+
+  def handle_call(:get_status, _from, state) do
+    {:reply, Map.drop(state, [:session]), state}
   end
 
   def handle_cast({:request_tokens, _pid}, state) do
