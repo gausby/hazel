@@ -38,12 +38,13 @@ defmodule Hazel.PeerWire do
     transport.send(socket, [info_hash, local_id])
   end
 
-  @spec decode(binary) ::
+  @type message ::
     :awake | {:choke, boolean} | {:interest, boolean} |
     {:bit_field, binary} |
     {:have, non_neg_integer} |
     {:request | :cancel, piece_index, offset, byte_length} |
     {:piece, piece_index, offset, block :: binary}
+  @spec decode(binary) :: message
   def decode(<<0::big-size(32)>>), do: :awake
   def decode(<<_::big-size(32), message::binary>>) do
     case message do
@@ -76,6 +77,40 @@ defmodule Hazel.PeerWire do
     end
   end
 
-  @spec encode(:awake) :: binary
+  @spec encode(message) :: binary
   def encode(:awake), do: <<0, 0, 0, 0>>
+  def encode({:choke, status}) do
+    status
+    |> if(do: <<@choke>>, else: <<@unchoke>>)
+    |> with_message_length()
+  end
+  def encode({:interest, status}) do
+    status
+    |> if(do: <<@interested>>, else: <<@not_interested>>)
+    |> with_message_length()
+  end
+  def encode({:have, piece_index}) do
+    <<@have, piece_index::big-size(32)>>
+    |> with_message_length()
+  end
+  def encode({:bit_field, bit_field}) do
+    <<@bitfield, bit_field::binary>>
+    |> with_message_length()
+  end
+  def encode({:request, index, offset, byte_length}) do
+    <<@request, index::big-size(32), offset::big-size(32), byte_length::big-size(32)>>
+    |> with_message_length()
+  end
+  def encode({:piece, index, offset, block}) do
+    <<@piece, index::big-size(32), offset::big-size(32), block::binary>>
+    |> with_message_length()
+  end
+  def encode({:cancel, index, offset, byte_length}) do
+    <<@cancel, index::big-size(32), offset::big-size(32), byte_length::big-size(32)>>
+    |> with_message_length()
+  end
+
+  defp with_message_length(data) do
+    IO.iodata_to_binary([<<(byte_size(data))::big-size(32)>>, data])
+  end
 end
