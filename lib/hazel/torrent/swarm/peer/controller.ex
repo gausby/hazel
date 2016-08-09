@@ -36,6 +36,10 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
     GenServer.cast(via_name(session), {:receive, message})
   end
 
+  def handle_out(session, message) do
+    GenServer.cast(via_name(session), {:transmit, message})
+  end
+
   def status(session) do
     GenServer.call(via_name(session), :get_status)
   end
@@ -72,6 +76,11 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
         # IO.inspect reason
         {:stop, :normal, state}
     end
+  end
+
+  def handle_cast({:transmit, message}, state) do
+    # todo: "handle outgoing message"
+    {:noreply, state}
   end
 
   defp handle_message(:awake, state) do

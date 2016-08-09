@@ -21,7 +21,7 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
     {:ok, acceptor} = FauxAcceptorDeux.start_link()
     {:ok, {ip, port}} = FauxAcceptorDeux.get_info(acceptor)
     :ok = FauxAcceptorDeux.accept(acceptor, transmitter_pid)
-    :gen_tcp.connect(ip, port, active: false)
+    :gen_tcp.connect(ip, port, [:binary, active: false])
   end
 
   defp peer_controller_via_name({{local_id, info_hash}, peer_id}) do
@@ -40,7 +40,7 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
     assert is_pid(pid)
   end
 
-  test "appending an await message to the job queue" do
+  test "appending an awake message to the job queue" do
     session = generate_session()
     {:ok, pid} = start_transmitter(session)
 
@@ -50,10 +50,53 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
 
     {:ok, _client} = create_and_attach_client_to_transmitter(pid)
     :timer.sleep 100
-    Transmitter.append(pid, :await)
+    Transmitter.append(pid, :awake)
 
     {_current_state, internal_state} = get_current_state(pid)
-    assert %Transmitter{job_queue: {[:await], []}} = internal_state
+    assert %Transmitter{job_queue: {[:awake], []}} = internal_state
+  end
+
+  test "transmitting an awake message" do
+    session = generate_session()
+    {:ok, pid} = start_transmitter(session)
+    Hazel.TestHelpers.FauxServerDeux.start_link(
+      peer_controller_via_name(session),
+      [cb:
+       [transmit:
+        fn message, state ->
+          send state[:pid], message
+          :ok
+        end
+       ]])
+
+    {:ok, client} = create_and_attach_client_to_transmitter(pid)
+    :timer.sleep 100
+    Transmitter.append(pid, :awake)
+    Transmitter.add_tokens(pid, 4)
+
+    assert {:ok, <<0, 0, 0, 0>>} = :gen_tcp.recv(client, 0)
+    {_current_state, internal_state} = get_current_state(pid)
+    assert {[], []} = internal_state.job_queue
+    # the controller should receive the outgoing message
+    assert_receive <<0, 0, 0, 0>>
+  end
+
+  test "should throttle bytes sent" do
+    session = generate_session()
+    {:ok, pid} = start_transmitter(session)
+
+    Hazel.TestHelpers.FauxServerDeux.start_link(
+      peer_controller_via_name(session),
+      [transmitter_pid: pid, cb: []])
+
+    {:ok, client} = create_and_attach_client_to_transmitter(pid)
+    :timer.sleep 100
+    Transmitter.append(pid, :awake)
+    Transmitter.add_tokens(pid, 2)
+
+    assert {:ok, <<0, 0>>} = :gen_tcp.recv(client, 0)
+    {_current_state, internal_state} = get_current_state(pid)
+    assert <<0, 0>> = internal_state.current_job
   end
 end
 

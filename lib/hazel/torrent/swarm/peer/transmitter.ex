@@ -3,6 +3,8 @@ defmodule Hazel.Torrent.Swarm.Peer.Transmitter do
 
   use GenStateMachine
 
+  alias Hazel.Torrent.Swarm.Peer
+
   # Client API
   def start_link(session, peer_id) do
     session_id = {session, peer_id}
@@ -54,13 +56,44 @@ defmodule Hazel.Torrent.Swarm.Peer.Transmitter do
 
   # altering the job queue
   def handle_event(:cast, {:append_job, job}, _, state) do
-    apply(state.transport, :send, [state.socket, Atom.to_string(job)])
     {:keep_state, %{state|job_queue: :queue.in(job, state.job_queue)}}
   end
 
   # transmitting data
-  def handle_event(:internal, :consume, :consume, state) do
+  def handle_event(:internal, :consume, :consume, %{current_job: nil} = state) do
+    case :queue.out(state.job_queue) do
+      {{:value, job}, queue} ->
+        encoded_job = Hazel.PeerWire.encode(job)
+        status = Allowance.set_remaining(state.status, byte_size(encoded_job))
+        new_state = %{state|job_queue: queue, current_job: encoded_job, status: status}
+        next_event = {:next_event, :internal, :consume}
+        {:keep_state, new_state, next_event}
+
+      {:empty, _} ->
+        {:keep_state, state}
+    end
+  end
+  def handle_event(:internal, :consume, :consume, %{status: {{message, 0}, _}} = state) do
+    Peer.Controller.handle_out(state.session, message)
     {:keep_state, state}
+  end
+  def handle_event(:internal, :consume, :consume, %{status: {_, 0}} = state) do
+    # ran out of tokens, await more tokens ...
+    {:keep_state, state}
+  end
+  def handle_event(:internal, :consume, :consume, %{status: status, current_job: current} = state) do
+    {tokens, status} = Allowance.take_tokens(status, byte_size(current))
+    <<message::binary-size(tokens), remaining::binary>> = current
+    case apply(state.transport, :send, [state.socket, message]) do
+      :ok ->
+        {:ok, status} = Allowance.write_buffer(status, message)
+        new_state = %{state|status: status, current_job: remaining}
+        next_event = {:next_event, :internal, :consume}
+        {:keep_state, new_state, next_event}
+
+      {:error, reason} ->
+        {:stop, reason, state}
+    end
   end
 
   # tokens

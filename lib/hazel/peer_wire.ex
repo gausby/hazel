@@ -75,4 +75,7 @@ defmodule Hazel.PeerWire do
         {:cancel, index, offset, byte_length}
     end
   end
+
+  @spec encode(:awake) :: binary
+  def encode(:awake), do: <<0, 0, 0, 0>>
 end
