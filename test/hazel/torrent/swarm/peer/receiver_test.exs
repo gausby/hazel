@@ -22,7 +22,7 @@ defmodule Hazel.Torrent.Swarm.Peer.ReceiverTest do
     {:ok, {ip, port}} = FauxAcceptor.get_info(acceptor)
     :ok = FauxAcceptor.accept(acceptor, receiver_pid)
 
-    :gen_tcp.connect(ip, port, active: false)
+    :gen_tcp.connect(ip, port, [:binary, active: false])
   end
 
   defp peer_controller_via_name({{local_id, info_hash}, peer_id}) do
