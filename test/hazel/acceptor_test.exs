@@ -42,7 +42,6 @@ defmodule Hazel.AcceptorTest do
       {:ok, connection} = :gen_tcp.connect(ip, port, active: false)
 
       :gen_tcp.send(connection, :crypto.strong_rand_bytes(68))
-      # todo, get rid of the ranch warning
       assert {:error, :closed} = :gen_tcp.recv(connection, 68, 5000)
     end
 

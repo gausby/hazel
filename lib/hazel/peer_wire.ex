@@ -17,6 +17,9 @@ defmodule Hazel.PeerWire do
       {:ok, <<@protocol_length, @protocol, _capabilities::binary-size(8),
               info_hash::binary-size(20), peer_id::binary-size(20)>>} ->
         {:ok, peer_id, info_hash}
+
+      {:ok, _} ->
+        {:error, :malformed_handshake}
     end
   end
 
