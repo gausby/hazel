@@ -2,20 +2,6 @@ defmodule Hazel.PeerWire do
   @protocol "BitTorrent Protocol"
   @protocol_length byte_size(@protocol)
 
-  @choke 0
-  @unchoke 1
-  @interested 2
-  @not_interested 3
-  @have 4
-  @bitfield 5
-  @request 6
-  @piece 7
-  @cancel 8
-
-  @type piece_index :: non_neg_integer
-  @type byte_length :: non_neg_integer
-  @type offset :: non_neg_integer
-
   defp protocol_header(capabilities) do
     [@protocol_length, @protocol, capabilities]
   end
@@ -38,43 +24,48 @@ defmodule Hazel.PeerWire do
     transport.send(socket, [info_hash, local_id])
   end
 
+  @type piece_index :: non_neg_integer
+  @type byte_length :: non_neg_integer
+  @type offset :: non_neg_integer
+
   @type message ::
     :awake | {:choke, boolean} | {:interest, boolean} |
     {:bit_field, binary} |
     {:have, non_neg_integer} |
     {:request | :cancel, piece_index, offset, byte_length} |
     {:piece, piece_index, offset, block :: binary}
+
+  @choke 0
+  @unchoke 1
+  @interested 2
+  @not_interested 3
+  @have 4
+  @bitfield 5
+  @request 6
+  @piece 7
+  @cancel 8
+
   @spec decode(binary) :: message
   def decode(<<0::big-size(32)>>), do: :awake
-  def decode(<<_::big-size(32), message::binary>>) do
-    case message do
-      <<@choke>> ->
-        {:choke, true}
-
-      <<@unchoke>> ->
-        {:choke, false}
-
-      <<@interested>> ->
-        {:interest, true}
-
-      <<@not_interested>> ->
-        {:interest, false}
-
-      <<@have, piece_index::big-size(32)>> ->
-        {:have, piece_index}
-
-      <<@bitfield, bit_field::binary>> ->
-        {:bit_field, bit_field}
-
-      <<@request, index::big-size(32), offset::big-size(32), byte_length::big-size(32)>> ->
-        {:request, index, offset, byte_length}
-
-      <<@piece, index::big-size(32), offset::big-size(32), block::binary>> ->
-        {:piece, index, offset, block}
-
-      <<@cancel, index::big-size(32), offset::big-size(32), byte_length::big-size(32)>> ->
-        {:cancel, index, offset, byte_length}
-    end
+  def decode(<<1::big-size(32), @choke>>), do: {:choke, true}
+  def decode(<<1::big-size(32), @unchoke>>), do: {:choke, false}
+  def decode(<<1::big-size(32), @interested>>), do: {:interest, true}
+  def decode(<<1::big-size(32), @not_interested>>), do: {:interest, false}
+  def decode(<<5::big-size(32), @have, piece_index::big-size(32)>>), do: {:have, piece_index}
+  def decode(<<13::big-size(32), @request,
+               index::big-size(32), offset::big-size(32), bytes::big-size(32)>>) do
+    {:request, index, offset, bytes}
+  end
+  def decode(<<13::big-size(32), @cancel,
+               index::big-size(32), offset::big-size(32), bytes::big-size(32)>>) do
+    {:cancel, index, offset, bytes}
+  end
+  def decode(<<_::big-size(32), @bitfield, bit_field::binary>>) do
+    {:bit_field, bit_field}
+  end
+  def decode(<<_::big-size(32), @piece,
+               index::big-size(32), offset::big-size(32), block::binary>>) do
+    {:piece, index, offset, block}
   end
 
   @spec encode(message) :: binary
