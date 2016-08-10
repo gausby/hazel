@@ -30,7 +30,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Transmitter do
   end
 
   def append(session, job) do
-    GenStateMachine.cast(via_name(session), {:append_job, job})
+    GenStateMachine.cast(via_name(session), {:job, :append, job})
   end
   # prepend(pid, job)
   # delete_job()
@@ -55,7 +55,12 @@ defmodule Hazel.Torrent.Swarm.Peer.Transmitter do
   end
 
   # altering the job queue
-  def handle_event(:cast, {:append_job, job}, _, state) do
+  def handle_event(:cast, {:job, type, jobs}, _, state) when is_list(jobs) do
+    next_events =
+      Enum.map(jobs, &({:next_event, :cast, {:job, type, &1}}))
+    {:keep_state, state, next_events}
+  end
+  def handle_event(:cast, {:job, :append, job}, _, state) do
     {:keep_state, %{state|job_queue: :queue.in(job, state.job_queue)}}
   end
 
@@ -73,9 +78,11 @@ defmodule Hazel.Torrent.Swarm.Peer.Transmitter do
         {:keep_state, state}
     end
   end
-  def handle_event(:internal, :consume, :consume, %{status: {{message, 0}, _}} = state) do
+  def handle_event(:internal, :consume, :consume, %{status: {{_, 0}, _}} = state) do
+    {message, status} = Allowance.get_and_reset_buffer(state.status)
     Peer.Controller.handle_out(state.session, message)
-    {:keep_state, state}
+    next_event = {:next_event, :internal, :consume}
+    {:keep_state, %{state|status: status, current_job: nil}, next_event}
   end
   def handle_event(:internal, :consume, :consume, %{status: {_, 0}} = state) do
     # ran out of tokens, await more tokens ...

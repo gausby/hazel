@@ -1,6 +1,7 @@
 defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
   use ExUnit.Case
 
+  alias Hazel.PeerWire
   alias Hazel.Torrent.Swarm.Peer.{Controller, Transmitter}
 
   defp generate_session() do
@@ -108,7 +109,34 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
 
     assert {:ok, <<0, 0, 0, 5, 4, 0, 0, 1, 73>>} = :gen_tcp.recv(client, 0)
     {_current_state, internal_state} = get_current_state(pid)
-    assert <<>> = internal_state.current_job
+    assert nil == internal_state.current_job
+  end
+
+  test "sending multiple messages" do
+    session = generate_session()
+    {:ok, pid} = start_transmitter(session)
+
+    Hazel.TestHelpers.FauxServerDeux.start_link(peer_controller_via_name(session),
+      [cb:
+       [transmit:
+        fn message, state ->
+          send state[:pid], PeerWire.decode(message)
+          :ok
+        end
+       ]])
+
+    {:ok, client} = create_and_attach_client_to_transmitter(pid)
+    :timer.sleep 100
+    Transmitter.append(pid, [{:have, 329}, :awake, {:request, 330, 2, 30}])
+    Transmitter.add_tokens(pid, 2000)
+
+    {:ok, _} = :gen_tcp.recv(client, 0)
+    assert_receive {:have, 329}
+    assert_receive :awake
+    assert_receive {:request, 330, 2, 30}
+
+    {_current_state, internal_state} = get_current_state(pid)
+    assert nil == internal_state.current_job
   end
 end
 
