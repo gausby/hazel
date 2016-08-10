@@ -18,7 +18,7 @@ defmodule Hazel.Torrent.Swarm.Peer.ReceiverTest do
   # generate a TCP acceptor on a random port and use that to
   # attach a client to a receiver
   defp create_and_attach_client_to_receiver(receiver_pid) do
-    {:ok, acceptor} = FauxAcceptor.start_link()
+    {:ok, acceptor} = FauxAcceptor.start_link(Receiver)
     {:ok, {ip, port}} = FauxAcceptor.get_info(acceptor)
     :ok = FauxAcceptor.accept(acceptor, receiver_pid)
 
@@ -123,41 +123,5 @@ defmodule Hazel.Torrent.Swarm.Peer.ReceiverTest do
     for message <- received_messages, do: assert_receive ^message
     should_not_receive = hd non_received_messages
     refute_receive ^should_not_receive
-  end
-end
-
-defmodule FauxAcceptor do
-  use GenServer
-
-  defstruct [socket: nil]
-
-  # Client API
-  def start_link() do
-    GenServer.start_link(__MODULE__, %__MODULE__{})
-  end
-
-  def get_info(pid) do
-    GenServer.call(pid, :info)
-  end
-
-  def accept(pid, receiver_pid) do
-    GenServer.cast(pid, {:accept, receiver_pid})
-  end
-
-  # Server callbacks
-  def init(state) do
-    {:ok, socket} = :gen_tcp.listen(0, [:binary, active: false])
-    {:ok, %{state|socket: socket}}
-  end
-
-  def handle_call(:info, _from, state) do
-    {:reply, :inet.sockname(state.socket), state}
-  end
-
-  def handle_cast({:accept, receiver_pid}, state) do
-    {:ok, client} = :gen_tcp.accept(state.socket)
-    :ok = :gen_tcp.controlling_process(client, receiver_pid)
-    :ok = Hazel.Torrent.Swarm.Peer.Receiver.handover_socket(receiver_pid, {:gen_tcp, client})
-    {:noreply, state}
   end
 end
