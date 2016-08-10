@@ -98,6 +98,24 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
     {_current_state, internal_state} = get_current_state(pid)
     assert <<0, 0>> = internal_state.current_job
   end
+
+  test "sending a message with a length" do
+    session = generate_session()
+    {:ok, pid} = start_transmitter(session)
+
+    Hazel.TestHelpers.FauxServerDeux.start_link(
+      peer_controller_via_name(session),
+      [transmitter_pid: pid, cb: []])
+
+    {:ok, client} = create_and_attach_client_to_transmitter(pid)
+    :timer.sleep 100
+    Transmitter.append(pid, {:have, 329})
+    Transmitter.add_tokens(pid, 200)
+
+    assert {:ok, <<0, 0, 0, 5, 4, 0, 0, 1, 73>>} = :gen_tcp.recv(client, 0)
+    {_current_state, internal_state} = get_current_state(pid)
+    assert <<>> = internal_state.current_job
+  end
 end
 
 defmodule FauxAcceptorDeux do
