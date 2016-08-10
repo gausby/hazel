@@ -63,15 +63,21 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     {:ok, context}
   end
 
+  defp torrent_controller_via_name({local_id, info_hash}) do
+    {Hazel.Torrent.Controller, local_id, info_hash}
+  end
+
   test "should request peers when disconnected", %{local_id: local_id, info_hash: info_hash} do
-    parent = self
-    request_peer_cb = fn
-      piece_index, _state -> send parent, {:got_request, piece_index}
-    end
-    {:ok, _pid} =
-      FauxServer.start_link(local_id, info_hash,
-        [mod: Hazel.Torrent.Controller,
-         cb: %{request_peer: request_peer_cb}])
+    session = {local_id, info_hash}
+
+    FauxServer.start_link(
+      torrent_controller_via_name(session),
+      [cb: [
+          request_peer:
+          fn piece_index, state ->
+            send state[:pid], {:got_request, piece_index}
+            :ok
+          end]])
 
     %{processes: _processes_pid} =
       create_processes(local_id, info_hash, "foobar", [piece_length: 3])
@@ -81,7 +87,6 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     assert_receive {:got_request, 0}
     # When a peer is introduced to the swarm and then removed it
     # should request a new peer
-    session = {local_id, info_hash}
     {:ok, peer_pid} = PeerMock.start_link(session)
     Store.Processes.Worker.announce_peer({session, 0}, peer_pid)
     PeerMock.stop(peer_pid)
@@ -89,14 +94,16 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
   end
 
   test "should be able to receive data when connected", %{local_id: local_id, info_hash: info_hash} do
-    parent = self
-    request_peer_cb = fn piece_index, _state ->
-      send parent, {:got_request, piece_index}
-    end
-    {:ok, _pid} =
-      FauxServer.start_link(local_id, info_hash,
-        [mod: Hazel.Torrent.Controller,
-         cb: %{request_peer: request_peer_cb}])
+    session = {local_id, info_hash}
+
+    FauxServer.start_link(
+      torrent_controller_via_name(session),
+      [cb: [
+          request_peer:
+          fn piece_index, state ->
+            send state[:pid], {:got_request, piece_index}
+            :ok
+          end]])
 
     %{processes: _processes_pid} =
       create_processes(local_id, info_hash, "abcdefgh", [piece_length: 2])
@@ -105,28 +112,31 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     Store.Processes.get_piece({local_id, info_hash}, 0)
     assert_receive {:got_request, 0}
 
-    session = {local_id, info_hash}
     {:ok, peer_pid} = PeerMock.start_link(session)
     :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid)
     :ok = PeerMock.send_data(peer_pid, 0, 0, "ab")
     :timer.sleep 100
-    assert {:ok, "ab"} = Hazel.Torrent.Store.File.get_chunk(session, 0, 0, 2)
+    assert {:ok, "ab"} = Hazel.Torrent.Store.File.get_chunk(session, 0, 0, 2) # todo, failing once in a while
   end
 
   test "should send \"have\" to the controller when piece is complete and verified",
     %{local_id: local_id, info_hash: info_hash} do
-    parent = self()
-    request_peer_cb = fn piece_index, _state ->
-      send parent, {:got_request, piece_index}
-    end
-    broadcast_piece_cb = fn piece_index, _state ->
-      send parent, {:broadcast_piece, piece_index}
-    end
-    {:ok, _pid} =
-      FauxServer.start_link(local_id, info_hash,
-        [mod: Hazel.Torrent.Controller,
-         cb: %{request_peer: request_peer_cb,
-               broadcast_piece: broadcast_piece_cb}])
+    session = {local_id, info_hash}
+
+    FauxServer.start_link(
+      torrent_controller_via_name(session),
+      [cb: [
+          request_peer:
+          fn piece_index, state ->
+            send state[:pid], {:got_request, piece_index}
+            :ok
+          end,
+
+          broadcast_piece:
+          fn piece_index, state ->
+            send state[:pid], {:broadcast_piece, piece_index}
+            :ok
+          end]])
 
     %{} = create_processes(local_id, info_hash, "abcdefgh", [piece_length: 8, chunk_size: 4])
 
@@ -135,7 +145,6 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     assert_receive {:got_request, 0}
 
     # create peer, announce it, and send data
-    session = {local_id, info_hash}
     {:ok, peer_pid} = PeerMock.start_link(session)
     :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid)
     PeerMock.send_data(peer_pid, 0, 0, "abcd")
@@ -149,19 +158,22 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
 
   test "should fetch data from another peer if data is invalid",
     %{local_id: local_id, info_hash: info_hash} do
-    parent = self()
-    request_peer_cb = fn piece_index, _state ->
-      send parent, {:got_request, piece_index}
-    end
-    broadcast_piece_cb = fn piece_index, _state ->
-      send parent, {:broadcast_piece, piece_index}
-    end
-    {:ok, _pid} =
-      FauxServer.start_link(local_id, info_hash,
-        [mod: Hazel.Torrent.Controller,
-         cb: %{request_peer: request_peer_cb,
-               broadcast_piece: broadcast_piece_cb}])
+    session = {local_id, info_hash}
 
+    FauxServer.start_link(
+      torrent_controller_via_name(session),
+      [cb: [
+          request_peer:
+          fn piece_index, state ->
+            send state[:pid], {:got_request, piece_index}
+            :ok
+          end,
+
+          broadcast_piece:
+          fn piece_index, state ->
+            send state[:pid], {:broadcast_piece, piece_index}
+            :ok
+          end]])
 
     %{} = create_processes(local_id, info_hash, "abcdefgh", [piece_length: 8, chunk_size: 8])
 
@@ -170,12 +182,11 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     assert_receive {:got_request, 0}
 
     # create peer, announce it, and send incorrect data
-    session = {local_id, info_hash}
     {:ok, peer_pid} = PeerMock.start_link(session)
     :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid)
     PeerMock.send_data(peer_pid, 0, 0, "abdcefhg")
     refute_receive {:broadcast_piece, 0}
-    assert_receive {:got_request, 0}
+    assert_receive {:got_request, 0} # todo, failing once in a while
 
     # create a new peer, announce it and send the correct data
     {:ok, peer_pid2} = PeerMock.start_link(session)
@@ -187,16 +198,22 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
 
   test "should continue fetching data from another peer if connection is dropped",
     %{local_id: local_id, info_hash: info_hash} do
-    parent = self()
-    request_peer_cb =
-      fn piece_index, _state -> send parent, {:got_request, piece_index} end
-    broadcast_piece_cb =
-      fn piece_index, _state -> send parent, {:broadcast_piece, piece_index} end
-    {:ok, _pid} =
-      FauxServer.start_link(local_id, info_hash,
-        [mod: Hazel.Torrent.Controller,
-         cb: %{request_peer: request_peer_cb,
-               broadcast_piece: broadcast_piece_cb}])
+    session = {local_id, info_hash}
+
+    FauxServer.start_link(
+      torrent_controller_via_name(session),
+      [cb: [
+          request_peer:
+          fn piece_index, state ->
+            send state[:pid], {:got_request, piece_index}
+            :ok
+          end,
+
+          broadcast_piece:
+          fn piece_index, state ->
+            send state[:pid], {:broadcast_piece, piece_index}
+            :ok
+          end]])
 
     %{} = create_processes(local_id, info_hash, "abcdefgh", [piece_length: 8, chunk_size: 2])
 

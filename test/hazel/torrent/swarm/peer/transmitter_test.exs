@@ -1,6 +1,7 @@
 defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
   use ExUnit.Case
 
+  alias Hazel.TestHelpers.FauxServer
   alias Hazel.PeerWire
   alias Hazel.Torrent.Swarm.Peer.{Controller, Transmitter}
 
@@ -45,7 +46,7 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
     session = generate_session()
     {:ok, pid} = start_transmitter(session)
 
-    Hazel.TestHelpers.FauxServerDeux.start_link(peer_controller_via_name(session))
+    FauxServer.start_link(peer_controller_via_name(session))
 
     {:ok, _client} = create_and_attach_client_to_transmitter(pid)
     :timer.sleep 100
@@ -58,15 +59,15 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
   test "transmitting an awake message" do
     session = generate_session()
     {:ok, pid} = start_transmitter(session)
-    Hazel.TestHelpers.FauxServerDeux.start_link(
+    FauxServer.start_link(
       peer_controller_via_name(session),
-      [cb:
-       [transmit:
-        fn message, state ->
-          send state[:pid], message
-          :ok
-        end
-       ]])
+      [cb: [
+          transmit:
+          fn message, state ->
+            send state[:pid], message
+            :ok
+          end
+        ]])
 
     {:ok, client} = create_and_attach_client_to_transmitter(pid)
     :timer.sleep 100
@@ -84,7 +85,7 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
     session = generate_session()
     {:ok, pid} = start_transmitter(session)
 
-    Hazel.TestHelpers.FauxServerDeux.start_link(peer_controller_via_name(session))
+    FauxServer.start_link(peer_controller_via_name(session))
 
     {:ok, client} = create_and_attach_client_to_transmitter(pid)
     :timer.sleep 100
@@ -100,7 +101,7 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
     session = generate_session()
     {:ok, pid} = start_transmitter(session)
 
-    Hazel.TestHelpers.FauxServerDeux.start_link(peer_controller_via_name(session))
+    FauxServer.start_link(peer_controller_via_name(session))
 
     {:ok, client} = create_and_attach_client_to_transmitter(pid)
     :timer.sleep 100
@@ -116,14 +117,14 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
     session = generate_session()
     {:ok, pid} = start_transmitter(session)
 
-    Hazel.TestHelpers.FauxServerDeux.start_link(peer_controller_via_name(session),
-      [cb:
-       [transmit:
-        fn message, state ->
-          send state[:pid], PeerWire.decode(message)
-          :ok
-        end
-       ]])
+    FauxServer.start_link(peer_controller_via_name(session),
+      [cb: [
+          transmit:
+          fn message, state ->
+            send state[:pid], PeerWire.decode(message)
+            :ok
+          end
+        ]])
 
     {:ok, client} = create_and_attach_client_to_transmitter(pid)
     :timer.sleep 100
@@ -143,7 +144,7 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
     session = generate_session()
     {:ok, pid} = start_transmitter(session)
 
-    Hazel.TestHelpers.FauxServerDeux.start_link(peer_controller_via_name(session))
+    FauxServer.start_link(peer_controller_via_name(session))
 
     {:ok, _client} = create_and_attach_client_to_transmitter(pid)
     :timer.sleep 100
@@ -157,7 +158,7 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
     session = generate_session()
     {:ok, pid} = start_transmitter(session)
 
-    Hazel.TestHelpers.FauxServerDeux.start_link(peer_controller_via_name(session))
+    FauxServer.start_link(peer_controller_via_name(session))
 
     {:ok, _client} = create_and_attach_client_to_transmitter(pid)
     :timer.sleep 100
@@ -172,7 +173,7 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
     session = generate_session()
     {:ok, pid} = start_transmitter(session)
 
-    Hazel.TestHelpers.FauxServerDeux.start_link(peer_controller_via_name(session))
+    FauxServer.start_link(peer_controller_via_name(session))
 
     {:ok, _client} = create_and_attach_client_to_transmitter(pid)
     :timer.sleep 100

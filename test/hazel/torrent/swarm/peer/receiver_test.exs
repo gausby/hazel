@@ -1,6 +1,7 @@
 defmodule Hazel.Torrent.Swarm.Peer.ReceiverTest do
   use ExUnit.Case
 
+  alias Hazel.TestHelpers.FauxServer
   alias Hazel.Torrent.Swarm.Peer.{Controller, Receiver}
 
   defp generate_session() do
@@ -39,7 +40,7 @@ defmodule Hazel.Torrent.Swarm.Peer.ReceiverTest do
     session = generate_session()
     {:ok, receiver_pid} = start_receiver(session)
 
-    Hazel.TestHelpers.FauxServerDeux.start_link(
+    FauxServer.start_link(
       peer_controller_via_name(session),
       [receiver_pid: receiver_pid, cb:
        [request_tokens:
@@ -63,7 +64,7 @@ defmodule Hazel.Torrent.Swarm.Peer.ReceiverTest do
     session = generate_session()
     {:ok, receiver_pid} = start_receiver(session)
 
-    Hazel.TestHelpers.FauxServerDeux.start_link(
+    FauxServer.start_link(
       peer_controller_via_name(session),
       [receiver_pid: receiver_pid, cb:
        [request_tokens:
@@ -91,7 +92,7 @@ defmodule Hazel.Torrent.Swarm.Peer.ReceiverTest do
     session = generate_session()
     {:ok, receiver_pid} = start_receiver(session)
 
-    Hazel.TestHelpers.FauxServerDeux.start_link(
+    FauxServer.start_link(
       peer_controller_via_name(session),
       [receiver_pid: receiver_pid, tokens: 10, cb:
        [request_tokens:
