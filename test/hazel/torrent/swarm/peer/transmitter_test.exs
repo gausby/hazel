@@ -29,8 +29,8 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
   end
 
   defp get_current_state(pid) do
-    {:status, _, _, [_|[_,_,_,hi]]} = :sys.get_status(pid)
-    [_,[{'State', {current_state, internal_state}}]] = Keyword.get_values(hi, :data)
+    {:status, _, _, [_|[_,_,_, state]]} = :sys.get_status(pid)
+    [_,[{'State', {current_state, internal_state}}]] = Keyword.get_values(state, :data)
     {current_state, internal_state}
   end
 
@@ -44,9 +44,7 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
     session = generate_session()
     {:ok, pid} = start_transmitter(session)
 
-    Hazel.TestHelpers.FauxServerDeux.start_link(
-      peer_controller_via_name(session),
-      [transmitter_pid: pid, cb: []])
+    Hazel.TestHelpers.FauxServerDeux.start_link(peer_controller_via_name(session))
 
     {:ok, _client} = create_and_attach_client_to_transmitter(pid)
     :timer.sleep 100
@@ -85,9 +83,7 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
     session = generate_session()
     {:ok, pid} = start_transmitter(session)
 
-    Hazel.TestHelpers.FauxServerDeux.start_link(
-      peer_controller_via_name(session),
-      [transmitter_pid: pid, cb: []])
+    Hazel.TestHelpers.FauxServerDeux.start_link(peer_controller_via_name(session))
 
     {:ok, client} = create_and_attach_client_to_transmitter(pid)
     :timer.sleep 100
@@ -103,9 +99,7 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
     session = generate_session()
     {:ok, pid} = start_transmitter(session)
 
-    Hazel.TestHelpers.FauxServerDeux.start_link(
-      peer_controller_via_name(session),
-      [transmitter_pid: pid, cb: []])
+    Hazel.TestHelpers.FauxServerDeux.start_link(peer_controller_via_name(session))
 
     {:ok, client} = create_and_attach_client_to_transmitter(pid)
     :timer.sleep 100
