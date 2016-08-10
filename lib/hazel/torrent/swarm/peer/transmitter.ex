@@ -61,7 +61,13 @@ defmodule Hazel.Torrent.Swarm.Peer.Transmitter do
     {:keep_state, state, next_events}
   end
   def handle_event(:cast, {:job, :append, job}, _, state) do
-    {:keep_state, %{state|job_queue: :queue.in(job, state.job_queue)}}
+    new_state =
+      unless :queue.member(job, state.job_queue) do
+        %{state|job_queue: :queue.in(job, state.job_queue)}
+      else
+        state
+      end
+    {:keep_state, new_state}
   end
 
   # transmitting data
