@@ -152,6 +152,21 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
     {_current_state, internal_state} = get_current_state(pid)
     assert {[:awake], []} == internal_state.job_queue
   end
+
+  test "should be able to insert a job in the start of the queue" do
+    session = generate_session()
+    {:ok, pid} = start_transmitter(session)
+
+    Hazel.TestHelpers.FauxServerDeux.start_link(peer_controller_via_name(session))
+
+    {:ok, _client} = create_and_attach_client_to_transmitter(pid)
+    :timer.sleep 100
+    Transmitter.append(pid, {:choke, true})
+    Transmitter.prepend(pid, :awake)
+
+    {_current_state, internal_state} = get_current_state(pid)
+    assert {[{:choke, true}], [:awake]} == internal_state.job_queue
+  end
 end
 
 defmodule FauxAcceptorDeux do

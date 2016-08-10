@@ -32,7 +32,9 @@ defmodule Hazel.Torrent.Swarm.Peer.Transmitter do
   def append(session, job) do
     GenStateMachine.cast(via_name(session), {:job, :append, job})
   end
-  # prepend(pid, job)
+  def prepend(session, job) do
+    GenStateMachine.cast(via_name(session), {:job, :prepend, job})
+  end
   # delete_job()
 
   def add_tokens(session, tokens) do
@@ -69,6 +71,17 @@ defmodule Hazel.Torrent.Swarm.Peer.Transmitter do
       end
     {:keep_state, new_state}
   end
+
+  def handle_event(:cast, {:job, :prepend, job}, _, state) do
+    new_state =
+      unless :queue.member(job, state.job_queue) do
+        %{state|job_queue: :queue.in_r(job, state.job_queue)}
+      else
+        state
+      end
+    {:keep_state, new_state}
+  end
+
 
   # transmitting data
   def handle_event(:internal, :consume, :consume, %{current_job: nil} = state) do
