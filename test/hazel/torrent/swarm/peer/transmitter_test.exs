@@ -167,6 +167,21 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
     {_current_state, internal_state} = get_current_state(pid)
     assert {[{:choke, true}], [:awake]} == internal_state.job_queue
   end
+
+  test "if a prepended job is already in the queue it should be moved to the front" do
+    session = generate_session()
+    {:ok, pid} = start_transmitter(session)
+
+    Hazel.TestHelpers.FauxServerDeux.start_link(peer_controller_via_name(session))
+
+    {:ok, _client} = create_and_attach_client_to_transmitter(pid)
+    :timer.sleep 100
+    Transmitter.append(pid, [{:choke, true}, {:have, 4}, {:interest, false}])
+    Transmitter.prepend(pid, {:interest, false})
+
+    {_current_state, internal_state} = get_current_state(pid)
+    assert {[{:have, 4}], [{:interest, false}, {:choke, true}]} == internal_state.job_queue
+  end
 end
 
 defmodule FauxAcceptorDeux do

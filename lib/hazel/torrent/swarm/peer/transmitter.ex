@@ -74,10 +74,13 @@ defmodule Hazel.Torrent.Swarm.Peer.Transmitter do
 
   def handle_event(:cast, {:job, :prepend, job}, _, state) do
     new_state =
-      unless :queue.member(job, state.job_queue) do
-        %{state|job_queue: :queue.in_r(job, state.job_queue)}
+      if :queue.member(job, state.job_queue) do
+        # If the job is already in queue it should get moved to the
+        # front (i.e. there will only be one of that job in the queue)
+        queue = :queue.filter(fn j -> j != job end, state.job_queue)
+        %{state|job_queue: :queue.in_r(job, queue)}
       else
-        state
+        %{state|job_queue: :queue.in_r(job, state.job_queue)}
       end
     {:keep_state, new_state}
   end
