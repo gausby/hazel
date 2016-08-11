@@ -37,7 +37,7 @@ defmodule Hazel.Torrent.Swarm.Peer.ReceiverTest do
     assert is_pid(pid)
   end
 
-  test "receiving an await message" do
+  test "receiving an awake message" do
     session = generate_session()
     {:ok, receiver_pid} = start_receiver(session)
 
