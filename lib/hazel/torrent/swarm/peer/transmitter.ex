@@ -102,7 +102,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Transmitter do
   end
   def handle_event(:internal, :consume, :consume, %{status: {{_, 0}, _}} = state) do
     {message, status} = Allowance.get_and_reset_buffer(state.status)
-    Peer.Controller.handle_out(state.session, message)
+    Peer.Controller.outgoing(state.session, message)
     next_event = {:next_event, :internal, :consume}
     {:keep_state, %{state|status: status, current_job: nil}, next_event}
   end

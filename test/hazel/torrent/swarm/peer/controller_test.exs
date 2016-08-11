@@ -24,13 +24,39 @@ defmodule Hazel.Torrent.Swarm.Peer.ControllerTest do
     {:ok, pid} = Controller.start_link(session, peer_id, [])
     assert %Controller{} = status = Controller.status(pid)
     # Either we or the remote should be have interest on init
-    refute status.interesting?
     refute status.peer_interested?
     # and both should choke each other
-    assert status.choking?
     assert status.peer_choking?
     # the remote should have an empty bit field
     assert MapSet.to_list(status.bit_field.pieces) == []
     assert ^info_hash = status.bit_field.info_hash
+  end
+
+  test "changing choke status" do
+    {session, peer_id} = generate_session()
+    {:ok, pid} = Controller.start_link(session, peer_id, [])
+
+    # initial state should be choking
+    assert Controller.status(pid).choking?
+    # stop choking
+    Controller.outgoing(pid, {:choke, false})
+    refute Controller.status(pid).choking?
+    # start choking again
+    Controller.outgoing(pid, {:choke, true})
+    assert Controller.status(pid).choking?
+  end
+
+  test "changing interest" do
+    {session, peer_id} = generate_session()
+    {:ok, pid} = Controller.start_link(session, peer_id, [])
+
+    # initial state should be not interested
+    refute Controller.status(pid).interesting?
+    # switch to interested state
+    Controller.outgoing(pid, {:interest, true})
+    assert Controller.status(pid).interesting?
+    # switch to not interested again
+    Controller.outgoing(pid, {:interest, false})
+    refute Controller.status(pid).interesting?
   end
 end

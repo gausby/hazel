@@ -36,7 +36,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
     GenServer.cast(via_name(session), {:receive, message})
   end
 
-  def handle_out(session, message) do
+  def outgoing(session, message) do
     GenServer.cast(via_name(session), {:transmit, message})
   end
 
@@ -62,7 +62,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
   end
 
   def handle_cast({:request_tokens, _pid}, state) do
-    # ask tokens, get some stats about how long it took to consume
+    # ask for tokens, get some stats about how long it took to consume
     # the given tokens
     {:noreply, state}
   end
@@ -78,10 +78,27 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
     end
   end
 
-  def handle_cast({:transmit, _message}, state) do
-    # todo: "handle outgoing message"
-    {:noreply, state}
+  def handle_cast({:transmit, message}, state) do
+    case handle_out(message, state) do
+      {:ok, state} ->
+        {:noreply, state}
+
+      {:error, _reason} ->
+        # IO.inspect reason
+        {:stop, :normal, state}
+    end
   end
+
+  def handle_out(:awake, state) do
+    {:ok, state}
+  end
+  def handle_out({:choke, choke?}, state) when is_boolean(choke?) do
+    {:ok, %{state|choking?: choke?}}
+  end
+  def handle_out({:interest, interest?}, state) when is_boolean(interest?) do
+    {:ok, %{state|interesting?: interest?}}
+  end
+
 
   defp handle_in(:awake, state) do
     {:ok, state}
