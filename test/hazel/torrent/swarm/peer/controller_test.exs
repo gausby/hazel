@@ -73,4 +73,43 @@ defmodule Hazel.Torrent.Swarm.Peer.ControllerTest do
     Controller.incoming(pid, {:interest, false})
     refute Controller.status(pid).peer_interested?
   end
+
+  test "remote changes choke status" do
+    {session, peer_id} = generate_session()
+    {:ok, pid} = Controller.start_link(session, peer_id, [])
+
+    # initial state should be choking us
+    assert Controller.status(pid).peer_choking?
+    # switch to not choking
+    Controller.incoming(pid, {:choke, false})
+    refute Controller.status(pid).peer_choking?
+    # switch back to choking again
+    Controller.incoming(pid, {:choke, true})
+    assert Controller.status(pid).peer_choking?
+  end
+
+  test "remote sends bit field information" do
+    {{_, info_hash} = session, peer_id} = generate_session()
+    {:ok, pid} = Controller.start_link(session, peer_id, [])
+
+    assert BitFieldSet.empty?(Controller.status(pid).bit_field)
+
+    data = <<129, 5, 0>>
+    Controller.incoming(pid, {:bit_field, data})
+
+    bit_field = Controller.status(pid).bit_field
+    refute BitFieldSet.empty?(bit_field)
+
+    {:ok, expected} = BitFieldSet.new(data, 20, info_hash)
+    assert BitFieldSet.equal?(bit_field, expected)
+  end
+
+  test "remote updates bit field state" do
+    {session, peer_id} = generate_session()
+    {:ok, pid} = Controller.start_link(session, peer_id, [])
+
+    assert BitFieldSet.empty?(Controller.status(pid).bit_field)
+    Controller.incoming(pid, {:have, 5})
+    refute BitFieldSet.empty?(Controller.status(pid).bit_field)
+  end
 end

@@ -89,17 +89,25 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
     end
   end
 
-  def handle_out(:awake, state) do
-    {:ok, state}
-  end
+  #=Outgoing =========================================================
+  # Triggered when the transmitter has completed sending the message
+  # to the remote. It would be safe to assume that they got the memo
+  # when this is triggered.
   def handle_out({:choke, choke?}, state) when is_boolean(choke?) do
     {:ok, %{state|choking?: choke?}}
   end
+
   def handle_out({:interest, interest?}, state) when is_boolean(interest?) do
     {:ok, %{state|interesting?: interest?}}
   end
 
+  def handle_out(_, state) do
+    {:ok, state}
+  end
 
+  #=Incoming =========================================================
+  # Triggered when the receiver process has received a full message
+  # from the remote.
   defp handle_in(:awake, state) do
     {:ok, state}
   end
