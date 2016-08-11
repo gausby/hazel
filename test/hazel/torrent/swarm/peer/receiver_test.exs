@@ -1,6 +1,7 @@
 defmodule Hazel.Torrent.Swarm.Peer.ReceiverTest do
   use ExUnit.Case
 
+  alias Hazel.PeerWire
   alias Hazel.TestHelpers.FauxServer
   alias Hazel.Torrent.Swarm.Peer.{Controller, Receiver}
 
@@ -49,15 +50,15 @@ defmodule Hazel.Torrent.Swarm.Peer.ReceiverTest do
         end,
 
         receive:
-        fn <<0,0,0,0>> = message, state ->
-          send state[:pid], message
+        fn :awake, state ->
+          send state[:pid], :awake
           :ok
         end
        ]])
 
     {:ok, client} = create_and_attach_client_to_receiver(receiver_pid)
     assert :ok = :gen_tcp.send(client, <<0,0,0,0>>)
-    assert_receive <<0,0,0,0>>
+    assert_receive :awake
   end
 
   test "receiving a bunch of messages in a row" do
@@ -79,12 +80,16 @@ defmodule Hazel.Torrent.Swarm.Peer.ReceiverTest do
         end
        ]])
 
-    messages = [<<0,0,0,1,0>>, <<0,0,0,1,1>>,
-                <<0,0,0,1,2>>, <<0,0,0,1,3>>,
-                <<0,0,0,1,4>>]
-
+    messages = [{:choke, true}, {:choke, false},
+                {:interest, true}, {:interest, false},
+                {:have, 2}]
     {:ok, client} = create_and_attach_client_to_receiver(receiver_pid)
-    assert :ok = :gen_tcp.send(client, IO.iodata_to_binary(messages))
+    data =
+      messages
+      |> Enum.map(&(PeerWire.encode(&1)))
+      |> IO.iodata_to_binary
+
+    assert :ok = :gen_tcp.send(client, data)
     for message <- messages, do: assert_receive ^message
   end
 
@@ -115,10 +120,13 @@ defmodule Hazel.Torrent.Swarm.Peer.ReceiverTest do
         end
        ]])
 
-    messages = [<<0,0,0,1,0>>, <<0,0,0,1,1>>, <<0,0,0,1,2>>]
-
+    messages = [{:choke, true}, {:choke, false}, {:interest, true}]
     {:ok, client} = create_and_attach_client_to_receiver(receiver_pid)
-    assert :ok = :gen_tcp.send(client, IO.iodata_to_binary(messages))
+    data =
+      messages
+      |> Enum.map(&(PeerWire.encode(&1)))
+      |> IO.iodata_to_binary
+    assert :ok = :gen_tcp.send(client, data)
 
     {received_messages, non_received_messages} = Enum.split(messages, 2)
     for message <- received_messages, do: assert_receive ^message

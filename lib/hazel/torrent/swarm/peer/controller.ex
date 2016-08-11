@@ -32,7 +32,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
     GenServer.cast(via_name(session), {:request_tokens, something})
   end
 
-  def receive_message(session, message) do
+  def incoming(session, message) do
     GenServer.cast(via_name(session), {:receive, message})
   end
 
@@ -68,7 +68,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
   end
 
   def handle_cast({:receive, message}, state) do
-    case handle_in(Hazel.PeerWire.decode(message), state) do
+    case handle_in(message, state) do
       {:ok, state} ->
         {:noreply, state}
 

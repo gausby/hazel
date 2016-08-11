@@ -12,6 +12,8 @@ defmodule Hazel.Torrent.Swarm.Peer.Receiver do
     status: Allowance.new(nil),
     session: nil
   )
+
+  alias Hazel.PeerWire
   alias Hazel.Torrent.Swarm.Peer
 
   # Client API
@@ -137,7 +139,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Receiver do
   end
 
   defp emit(state, data) do
-    Peer.Controller.receive_message(state.session, data)
+    Peer.Controller.incoming(state.session, PeerWire.decode(data))
   end
 
   defp request_tokens(%{status: {_, 0}} = state) do

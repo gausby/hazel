@@ -59,4 +59,18 @@ defmodule Hazel.Torrent.Swarm.Peer.ControllerTest do
     Controller.outgoing(pid, {:interest, false})
     refute Controller.status(pid).interesting?
   end
+
+  test "remote changes interest in us" do
+    {session, peer_id} = generate_session()
+    {:ok, pid} = Controller.start_link(session, peer_id, [])
+
+    # initial state should be not interested
+    refute Controller.status(pid).peer_interested?
+    # switch to interested state
+    Controller.incoming(pid, {:interest, true})
+    assert Controller.status(pid).peer_interested?
+    # switch to not interested again
+    Controller.incoming(pid, {:interest, false})
+    refute Controller.status(pid).peer_interested?
+  end
 end
