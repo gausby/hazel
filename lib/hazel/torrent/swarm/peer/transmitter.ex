@@ -3,6 +3,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Transmitter do
 
   use GenStateMachine
 
+  alias Hazel.PeerWire
   alias Hazel.Torrent.Swarm.Peer
 
   # Client API
@@ -85,12 +86,11 @@ defmodule Hazel.Torrent.Swarm.Peer.Transmitter do
     {:keep_state, new_state}
   end
 
-
   # transmitting data
   def handle_event(:internal, :consume, :consume, %{current_job: nil} = state) do
     case :queue.out(state.job_queue) do
       {{:value, job}, queue} ->
-        encoded_job = Hazel.PeerWire.encode(job)
+        encoded_job = PeerWire.encode(job)
         status = Allowance.set_remaining(state.status, byte_size(encoded_job))
         new_state = %{state|job_queue: queue, current_job: encoded_job, status: status}
         next_event = {:next_event, :internal, :consume}
@@ -102,7 +102,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Transmitter do
   end
   def handle_event(:internal, :consume, :consume, %{status: {{_, 0}, _}} = state) do
     {message, status} = Allowance.get_and_reset_buffer(state.status)
-    Peer.Controller.outgoing(state.session, message)
+    Peer.Controller.outgoing(state.session, PeerWire.decode(message))
     next_event = {:next_event, :internal, :consume}
     {:keep_state, %{state|status: status, current_job: nil}, next_event}
   end

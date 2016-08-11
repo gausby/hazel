@@ -2,7 +2,6 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
   use ExUnit.Case
 
   alias Hazel.TestHelpers.FauxServer
-  alias Hazel.PeerWire
   alias Hazel.Torrent.Swarm.Peer.{Controller, Transmitter}
 
   defp generate_session() do
@@ -78,7 +77,7 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
     {_current_state, internal_state} = get_current_state(pid)
     assert {[], []} = internal_state.job_queue
     # the controller should receive the outgoing message
-    assert_receive <<0, 0, 0, 0>>
+    assert_receive :awake
   end
 
   test "should throttle bytes sent" do
@@ -121,7 +120,7 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
       [cb: [
           transmit:
           fn message, state ->
-            send state[:pid], PeerWire.decode(message)
+            send state[:pid], message
             :ok
           end
         ]])
