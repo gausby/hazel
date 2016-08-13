@@ -9,9 +9,6 @@ defmodule PeerMock do
   def start_link({_local_id, _info_hash} = session) do
     GenServer.start_link(__MODULE__, %PeerMock{session: session})
   end
-  def start({_local_id, _info_hash} = session) do
-    GenServer.start(__MODULE__, %PeerMock{session: session})
-  end
 
   def send_data(pid, piece_index, offset, data) do
     GenServer.call(pid, {:piece, piece_index, offset, data})
@@ -221,7 +218,8 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     assert_receive {:got_request, 0}
 
     # create peer, announce it, and send incorrect data
-    {:ok, peer_pid} = PeerMock.start(session)
+    {:ok, peer_pid} = PeerMock.start_link(session)
+    true = Process.unlink(peer_pid)
     :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid)
     :ok = PeerMock.send_data(peer_pid, 0, 0, "ab")
     :ok = PeerMock.send_data(peer_pid, 0, 2, "cd")
