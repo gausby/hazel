@@ -152,7 +152,6 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     # the manager should receive a note about us having the piece, and
     # the download process should be terminated
     assert_receive {:broadcast_piece, 0}
-    :timer.sleep 100
     refute Process.alive? pid
   end
 
@@ -237,7 +236,6 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     PeerMock.send_data(peer_pid2, 0, 6, "gh")
 
     assert_receive {:broadcast_piece, 0}
-    :timer.sleep 100
     refute Process.alive?(pid)
   end
 
