@@ -112,7 +112,7 @@ defmodule Hazel.Torrent.Store.Processes.Worker do
   end
 
   def write_chunk(session, piece_number, offset, data) do
-    GenStateMachine.cast(via_name({session, piece_number}), {:retrieving, offset, data})
+    GenStateMachine.call(via_name({session, piece_number}), {:retrieving, offset, data})
   end
 
   #=Server callbacks =================================================
@@ -164,7 +164,7 @@ defmodule Hazel.Torrent.Store.Processes.Worker do
                           plan: plan}}
   end
 
-  def handle_event(:cast, {:retrieving, offset, data}, :connected, state) do
+  def handle_event({:call, from}, {:retrieving, offset, data}, :connected, state) do
     chunk_request =
       {:request, state.piece_number, offset, byte_size(data)}
 
@@ -175,7 +175,7 @@ defmodule Hazel.Torrent.Store.Processes.Worker do
         %{state|awaiting: state.awaiting -- [chunk_request],
                 completed: [{state.peer, chunk_request}|state.completed]}
 
-      what_next(new_state)
+      what_next(new_state, from)
     else
       # raise, stop or disconnect? We received something we didn't
       # expect; we should consider this a protocol violation.
@@ -194,12 +194,13 @@ defmodule Hazel.Torrent.Store.Processes.Worker do
     end)
   end
 
-  defp what_next(%{plan: [], awaiting: []} = state) do
+  defp what_next(%{plan: [], awaiting: []} = state, from) do
     if Store.File.validate_piece(state.session, state.piece_number) do
       :ok = Store.BitField.have(state.session, state.piece_number)
       # should this be handled by the swarm controller?
       :ok = Torrent.broadcast_piece(state.session, state.piece_number)
-      {:stop, :normal, state}
+      reply = {:reply, from, :ok}
+      {:stop_and_reply, :normal, reply, state}
     else
       # todo: keep track of the chunks that has been written by the
       # current peer and put the foreign ones back into the plan and
@@ -215,7 +216,10 @@ defmodule Hazel.Torrent.Store.Processes.Worker do
             |> Enum.sort_by(&(elem(&1, 2)))
 
           new_state = %{state|peer: nil, plan: incomplete, completed: []}
-          next_event = {:next_event, :internal, :request_peer}
+          next_event =
+            [{:reply, from, {:error, :invalid_data}},
+             {:next_event, :internal, :request_peer}]
+
           {:next_state, :disconnected, new_state, next_event}
 
         {completed, incomplete} ->
@@ -227,12 +231,13 @@ defmodule Hazel.Torrent.Store.Processes.Worker do
       end
     end
   end
-  defp what_next(%{awaiting: []} = state) do
-    next_event = {:next_event, :internal, :request_chunks}
+  defp what_next(%{awaiting: []} = state, from) do
+    next_event = [{:reply, from, :ok}, {:next_event, :internal, :request_chunks}]
     {:keep_state, state, next_event}
   end
-  defp what_next(state) do
-    {:keep_state, state}
+  defp what_next(state, from) do
+    next_event = {:reply, from, :ok}
+    {:keep_state, state, next_event}
   end
 
   #=Helpers ==========================================================
