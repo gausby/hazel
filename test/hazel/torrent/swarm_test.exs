@@ -1,5 +1,5 @@
 defmodule Hazel.Torrent.SwarmTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias Hazel.Torrent.Swarm
   alias Hazel.Torrent.Swarm.Peer.Controller

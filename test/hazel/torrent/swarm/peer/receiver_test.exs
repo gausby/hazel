@@ -1,5 +1,5 @@
 defmodule Hazel.Torrent.Swarm.Peer.ReceiverTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias Hazel.PeerWire
   alias Hazel.TestHelpers.FauxServer

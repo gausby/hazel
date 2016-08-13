@@ -1,5 +1,5 @@
 defmodule Hazel.Torrent.ControllerTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   test "hello" do
 

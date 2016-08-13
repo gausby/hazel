@@ -1,5 +1,5 @@
 defmodule HazelTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   doctest Hazel
 
   describe "peer_id generation" do

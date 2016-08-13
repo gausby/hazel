@@ -1,5 +1,5 @@
 defmodule Hazel.Torrent.Swarm.Peer.ControllerTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias Hazel.Torrent.Swarm.Peer.Controller
   alias Hazel.Torrent.Store.BitField

@@ -1,5 +1,5 @@
 defmodule Hazel.PeerWireTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias Hazel.PeerWire
 

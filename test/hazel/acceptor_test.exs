@@ -1,5 +1,5 @@
 defmodule Hazel.AcceptorTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   import Hazel.TestHelpers, only: [create_torrent_file: 2,
                                    encode_torrent_file: 1,

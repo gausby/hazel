@@ -1,5 +1,5 @@
 defmodule Hazel.Torrent.Store.BitFieldTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   doctest Hazel.Torrent.Store.BitField
 
   alias Hazel.Torrent.Store.BitField
