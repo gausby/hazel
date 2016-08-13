@@ -58,7 +58,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
              choking?: true, peer_choking?: true,
              bit_field: nil, session: nil]
 
-  def update_status(%__MODULE__{} = status) do
+  defp update_status(%__MODULE__{} = status) do
     true =
       status.session
       |> reg_name()
