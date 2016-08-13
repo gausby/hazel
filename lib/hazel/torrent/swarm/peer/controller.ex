@@ -5,6 +5,11 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
   alias Hazel.Torrent.Swarm.Peer.{Receiver, Transmitter}
   alias Hazel.Torrent.Store
 
+  @type local_id :: binary
+  @type info_hash :: binary
+  @type peer_id :: binary
+  @type session :: {local_id, info_hash}
+
   # Client API
   def start_link(session, peer_id, opts) do
     session_id = {session, peer_id}
@@ -13,8 +18,13 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
   end
 
   defp via_name(pid) when is_pid(pid), do: pid
-  defp via_name(session), do: {:via, :gproc, controller_name(session)}
-  defp controller_name({{local_id, info_hash}, peer_id}), do: {:n, :l, {__MODULE__, local_id, info_hash, peer_id}}
+  defp via_name(session), do: {:via, :gproc, reg_name(session)}
+
+  @doc false
+  @spec reg_name({{session, info_hash}, peer_id}) ::
+    {:n, :l, {:atom, local_id, info_hash, peer_id}}
+  def reg_name({{local_id, info_hash}, peer_id}),
+    do: {:n, :l, {__MODULE__, local_id, info_hash, peer_id}}
 
   def handover_socket(session, {transport, socket} = connection) do
     case Receiver.where_is(session) do
@@ -48,12 +58,21 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
              choking?: true, peer_choking?: true,
              bit_field: nil, session: nil]
 
+  def update_status(%__MODULE__{} = status) do
+    true =
+      status.session
+      |> reg_name()
+      |> :gproc.set_value(status)
+    status
+  end
+
   # Server callbacks
   def init(opts) do
     with {{local_id, info_hash}, _peer_id} = opts[:session],
          {:ok, bit_field_size} = Store.bit_field_size({local_id, info_hash}),
          {:ok, bit_field} = BitFieldSet.new(<<>>, bit_field_size, info_hash) do
-      {:ok, %__MODULE__{session: opts[:session], bit_field: bit_field}}
+
+      {:ok, update_status(%__MODULE__{session: opts[:session], bit_field: bit_field})}
     end
   end
 
@@ -70,7 +89,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
   def handle_cast({:receive, message}, state) do
     case handle_in(message, state) do
       {:ok, state} ->
-        {:noreply, state}
+        {:noreply, update_status(state)}
 
       {:error, _reason} ->
         # IO.inspect reason
@@ -81,7 +100,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
   def handle_cast({:transmit, message}, state) do
     case handle_out(message, state) do
       {:ok, state} ->
-        {:noreply, state}
+        {:noreply, update_status(state)}
 
       {:error, _reason} ->
         # IO.inspect reason
@@ -93,15 +112,15 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
   # Triggered when the transmitter has completed sending the message
   # to the remote. It would be safe to assume that they got the memo
   # when this is triggered.
-  def handle_out({:choke, choke?}, state) when is_boolean(choke?) do
+  defp handle_out({:choke, choke?}, state) when is_boolean(choke?) do
     {:ok, %{state|choking?: choke?}}
   end
 
-  def handle_out({:interest, interest?}, state) when is_boolean(interest?) do
+  defp handle_out({:interest, interest?}, state) when is_boolean(interest?) do
     {:ok, %{state|interesting?: interest?}}
   end
 
-  def handle_out(_, state) do
+  defp handle_out(_, state) do
     {:ok, state}
   end
 
