@@ -243,7 +243,9 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
 
     :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid2)
     :ok = Peer.Controller.incoming(peer_pid2, {:piece, 0, 4, "ef"})
+    assert_receive {:write_result, :ok}
     :ok = Peer.Controller.incoming(peer_pid2, {:piece, 0, 6, "gh"})
+    assert_receive {:write_result, :ok}
 
     assert_receive {:broadcast_piece, 0}
     refute Process.alive?(pid)
