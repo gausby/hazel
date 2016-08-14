@@ -1,55 +1,9 @@
-defmodule PeerMock do
-  use GenServer
-
-  alias Hazel.Torrent.Store
-
-  defstruct session: nil, requests: []
-
-  # Client API
-  def start_link({_local_id, _info_hash} = session) do
-    GenServer.start_link(__MODULE__, %PeerMock{session: session})
-  end
-
-  def send_data(pid, piece_index, offset, data) do
-    GenServer.call(pid, {:piece, piece_index, offset, data})
-  end
-
-  def requests(pid) do
-    GenServer.call(pid, :requests)
-  end
-
-  def stop(pid) do
-    GenServer.stop(pid, :normal, 1000)
-  end
-
-  # Server callbacks
-  def init(state) do
-    {:ok, state}
-  end
-
-  def handle_call(:requests, _from, state) do
-    {:reply, Enum.reverse(state.requests), state}
-  end
-
-  def handle_call({:piece, piece_index, offset, data}, _from,  state) do
-    result = Store.write_chunk(state.session, piece_index, offset, data)
-    {:reply, result, state}
-  end
-
-  def handle_info({:request, _, _, _} = request, state) do
-    {:noreply, %{state|requests: [request|state.requests]}}
-  end
-
-  def handle_info(_message, state) do
-    {:noreply, state}
-  end
-end
-
 defmodule Hazel.Torrent.Store.ProcessesTest do
   use ExUnit.Case, async: true
   doctest Hazel.Torrent.Store.Processes
 
   alias Hazel.Torrent.Store
+  alias Hazel.Torrent.Swarm.Peer
   alias Hazel.TestHelpers.FauxServer
 
   setup do
@@ -84,9 +38,14 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     assert_receive {:got_request, 0}
     # When a peer is introduced to the swarm and then removed it
     # should request a new peer
-    {:ok, peer_pid} = PeerMock.start_link(session)
+    {:ok, peer_pid} =
+      FauxServer.start_link(
+        Peer.Controller.reg_name({session, Hazel.generate_peer_id()})
+      )
+
     Store.Processes.Worker.announce_peer({session, 0}, peer_pid)
-    PeerMock.stop(peer_pid)
+    Process.unlink(peer_pid)
+    Process.exit(peer_pid, :kill)
     assert_receive {:got_request, 0}
   end
 
@@ -109,10 +68,20 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     {:ok, _pid} = Store.Processes.get_piece(session, 0)
     assert_receive {:got_request, 0}
 
-    {:ok, peer_pid} = PeerMock.start_link(session)
-    :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid)
-    :ok = PeerMock.send_data(peer_pid, 0, 0, "ab")
+    {:ok, peer_pid} =
+      FauxServer.start_link(
+        Peer.Controller.reg_name({session, Hazel.generate_peer_id()}),
+        [cb: [
+            receive:
+            fn {:piece, piece_index, offset, data}, state ->
+              send state[:pid], {:write_result, Store.write_chunk(session, piece_index, offset, data)}
+              :ok
+            end]])
 
+    :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid)
+
+    :ok = Peer.Controller.incoming(peer_pid, {:piece, 0, 0, "ab"})
+    assert_receive {:write_result, :ok}
     assert {:ok, "ab"} = Hazel.Torrent.Store.File.get_chunk(session, 0, 0, 2)
   end
 
@@ -142,10 +111,18 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     assert_receive {:got_request, 0}
 
     # create peer, announce it, and send data
-    {:ok, peer_pid} = PeerMock.start_link(session)
+    {:ok, peer_pid} =
+      FauxServer.start_link(
+        Peer.Controller.reg_name({session, Hazel.generate_peer_id()}),
+        [cb: [
+            receive:
+            fn {:piece, piece_index, offset, data}, _state ->
+              :ok = Store.write_chunk(session, piece_index, offset, data)
+            end]])
+
     :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid)
-    :ok = PeerMock.send_data(peer_pid, 0, 0, "abcd")
-    :ok = PeerMock.send_data(peer_pid, 0, 4, "efgh")
+    :ok = Peer.Controller.incoming(peer_pid, {:piece, 0, 0, "abcd"})
+    :ok = Peer.Controller.incoming(peer_pid, {:piece, 0, 4, "efgh"})
     # the manager should receive a note about us having the piece, and
     # the download process should be terminated
     assert_receive {:broadcast_piece, 0}
@@ -178,17 +155,34 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     assert_receive {:got_request, 0}
 
     # create peer, announce it, and send incorrect data
-    {:ok, peer_pid} = PeerMock.start_link(session)
+    receive_callback =
+      fn {:piece, piece_index, offset, data}, state ->
+        send(
+          state[:pid],
+          {:write_result, Store.write_chunk(session, piece_index, offset, data)}
+        )
+        :ok
+      end
+    {:ok, peer_pid} =
+      FauxServer.start_link(
+        Peer.Controller.reg_name({session, Hazel.generate_peer_id()}),
+        [cb: [receive: receive_callback]])
     :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid)
-    assert {:error, :invalid_data} = PeerMock.send_data(peer_pid, 0, 0, "abdcefhg")
+    :ok = Peer.Controller.incoming(peer_pid, {:piece, 0, 0, "abdcefhg"})
+
+    assert_receive {:write_result, {:error, :invalid_data}}
     refute_receive {:broadcast_piece, 0}
-    assert_receive {:got_request, 0} # todo, failing once in a while
+    assert_receive {:got_request, 0}
 
-    # create a new peer, announce it and send the correct data
-    {:ok, peer_pid2} = PeerMock.start_link(session)
+    # create a new peer, announce it, and send the correct data
+    {:ok, peer_pid2} =
+      FauxServer.start_link(
+        Peer.Controller.reg_name({session, Hazel.generate_peer_id()}),
+        [cb: [receive: receive_callback]])
     :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid2)
+    :ok = Peer.Controller.incoming(peer_pid2, {:piece, 0, 0, "abcdefgh"})
 
-    :ok = PeerMock.send_data(peer_pid2, 0, 0, "abcdefgh")
+    assert_receive {:write_result, :ok}
     assert_receive {:broadcast_piece, 0}
   end
 
@@ -217,21 +211,39 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     {:ok, pid} = Store.Processes.get_piece(session, 0)
     assert_receive {:got_request, 0}
 
-    # create peer, announce it, and send incorrect data
-    {:ok, peer_pid} = PeerMock.start_link(session)
-    true = Process.unlink(peer_pid)
-    :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid)
-    :ok = PeerMock.send_data(peer_pid, 0, 0, "ab")
-    :ok = PeerMock.send_data(peer_pid, 0, 2, "cd")
+    receive_callback = fn {:piece, piece_index, offset, data}, state ->
+      send(
+        state[:pid],
+        {:write_result, Store.write_chunk(session, piece_index, offset, data)}
+      )
+      :ok
+    end
 
+    # create peer, announce it, and send some of the data
+    {:ok, peer_pid} =
+      FauxServer.start_link(
+        Peer.Controller.reg_name({session, Hazel.generate_peer_id()}),
+        [cb: [receive: receive_callback]])
+
+    :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid)
+    :ok = Peer.Controller.incoming(peer_pid, {:piece, 0, 0, "ab"})
+    assert_receive {:write_result, :ok}
+    :ok = Peer.Controller.incoming(peer_pid, {:piece, 0, 2, "cd"})
+    assert_receive {:write_result, :ok}
+    # kill the peer
+    true = Process.unlink(peer_pid)
     Process.exit(peer_pid, :kill)
     assert_receive {:got_request, 0}
 
-    # create a new peer, announce it and send the correct data
-    {:ok, peer_pid2} = PeerMock.start_link(session)
+    # create a new peer, announce it and send the rest of the data
+    {:ok, peer_pid2} =
+      FauxServer.start_link(
+        Peer.Controller.reg_name({session, Hazel.generate_peer_id()}),
+        [cb: [receive: receive_callback]])
+
     :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid2)
-    :ok = PeerMock.send_data(peer_pid2, 0, 4, "ef")
-    :ok = PeerMock.send_data(peer_pid2, 0, 6, "gh")
+    :ok = Peer.Controller.incoming(peer_pid2, {:piece, 0, 4, "ef"})
+    :ok = Peer.Controller.incoming(peer_pid2, {:piece, 0, 6, "gh"})
 
     assert_receive {:broadcast_piece, 0}
     refute Process.alive?(pid)
