@@ -112,4 +112,12 @@ defmodule Hazel.Torrent.Swarm.Peer.ControllerTest do
     Controller.incoming(pid, {:have, 5})
     refute BitFieldSet.empty?(Controller.status(pid).bit_field)
   end
+
+  test "sending have message to remote" do
+    # todo, test that the transmitter actually receive this message
+    {session, peer_id} = generate_session()
+    {:ok, pid} = Controller.start_link(session, peer_id, [])
+
+    assert :ok = Controller.have(pid, 1)
+  end
 end

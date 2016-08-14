@@ -84,8 +84,8 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
     {:reply, Map.drop(state, [:session]), state}
   end
 
-  def handle_cast({:have, _piece_index}, state) do
-    # prepend have-message job to transmit queue
+  def handle_cast({:have, piece_index}, state) do
+    :ok = Transmitter.prepend(state.session, {:have, piece_index})
     {:noreply, state}
   end
 
