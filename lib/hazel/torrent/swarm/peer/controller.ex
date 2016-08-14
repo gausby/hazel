@@ -11,7 +11,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
   @type session :: {local_id, info_hash}
 
   # Client API
-  def start_link(session, peer_id, opts) do
+  def start_link(session, peer_id, opts \\ []) do
     session_id = {session, peer_id}
     opts = Keyword.merge(opts, session: session_id)
     GenServer.start_link(__MODULE__, opts, name: via_name(session_id))
@@ -40,6 +40,10 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
 
   def request_tokens(session, something) do
     GenServer.cast(via_name(session), {:request_tokens, something})
+  end
+
+  def have(session, piece_index) do
+    GenServer.cast(via_name(session), {:have, piece_index})
   end
 
   def incoming(session, message) do
@@ -78,6 +82,11 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
 
   def handle_call(:get_status, _from, state) do
     {:reply, Map.drop(state, [:session]), state}
+  end
+
+  def handle_cast({:have, _piece_index}, state) do
+    # prepend have-message job to transmit queue
+    {:noreply, state}
   end
 
   def handle_cast({:request_tokens, _pid}, state) do

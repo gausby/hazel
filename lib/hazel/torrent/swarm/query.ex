@@ -9,6 +9,14 @@ defmodule Hazel.Torrent.Swarm.Query do
   @type info_hash :: binary
   @type session :: {local_id, info_hash}
 
+  @spec all(session) :: [pid]
+  def all(session) do
+    key = Controller.reg_name({session, :'_'})
+    match_head = {key, :'$1', :'_'}
+    query = [{match_head, [], [:'$1']}]
+    :gproc.select(query)
+  end
+
   @spec interested_peers(session) :: [pid]
   def interested_peers(session) do
     session
@@ -57,10 +65,8 @@ defmodule Hazel.Torrent.Swarm.Query do
   @spec search(query :: t) :: [pid]
   def search(opts) do
     key = Controller.reg_name({opts.session, :'_'})
-
     match_head = {key, :'$1', opts.params}
     query = [{match_head, opts.guards, opts.result}]
-
     :gproc.select(query)
   end
 end
