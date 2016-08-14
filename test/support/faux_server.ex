@@ -36,12 +36,19 @@ defmodule Hazel.TestHelpers.FauxServer do
   end
 
   def handle_call(message, _from, state) do
-    # todo, fix handle_calls
     [command|args] = Tuple.to_list(message)
-    {reply, new_state} =
-      if is_function(state[:cb][command]) do
-        apply(state[:cb][command], args ++ [state])
+    if is_function(state[:cb][command]) do
+      case apply(state[:cb][command], args ++ [state]) do
+        {:ok, reply, new_state} when is_list(new_state) ->
+          {:reply, reply, new_state}
+
+        {:ok, reply} ->
+          {:reply, reply, state}
+
+        _ ->
+          raise ArgumentError,
+            message: "should return a `{:ok, reply, state}`- or an {:ok, reply}-tuple"
       end
-    {:reply, reply, new_state}
+    end
   end
 end
