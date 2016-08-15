@@ -53,10 +53,15 @@ defmodule Hazel.Torrent.Swarm.Query do
     %__MODULE__{session: session}
   end
 
+  @valid_params Map.from_struct(Controller) |> Map.keys
   defp add_param(%__MODULE__{params: params} = query, param) do
     updated_params =
-      Enum.reduce(param, params, fn ({param, value}, acc) ->
-        Map.put(acc, param, value)
+      Enum.reduce(param, params, fn
+        {param, value}, acc when param in @valid_params ->
+          Map.put(acc, param, value)
+
+        {param, _}, _ ->
+          raise ArgumentError, message: "#{param} is an invalid search parameter"
       end)
 
     %{query|params: updated_params}
