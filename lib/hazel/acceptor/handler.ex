@@ -42,8 +42,7 @@ defmodule Hazel.Acceptor.Handler do
   end
 
   defp not_on_the_blacklist(local_id, socket) do
-    {:ok, {ip, port}} = :inet.peername(socket)
-    remote = "#{ip |> Tuple.to_list |> Enum.join(".")}:#{port}"
+    {:ok, remote} = :inet.peername(socket)
 
     if Hazel.Acceptor.Blacklist.member?(local_id, remote),
       do: {:error, :peer_is_blacklisted},
