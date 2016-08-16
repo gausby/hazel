@@ -126,7 +126,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     # the manager should receive a note about us having the piece, and
     # the download process should be terminated
     assert_receive {:broadcast_piece, 0}
-    refute Process.alive? pid
+    refute Process.alive? pid # todo: fail from time to time
   end
 
   test "should fetch data from another peer if data is invalid",
