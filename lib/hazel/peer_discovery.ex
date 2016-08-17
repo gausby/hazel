@@ -13,12 +13,12 @@ defmodule Hazel.PeerDiscovery do
 
   def init(session) do
     children = [
-      supervisor(PeerDiscovery.Supervisor, [session]),
+      supervisor(PeerDiscovery.Services, [session]),
       worker(PeerDiscovery.Registry, [session]),
       worker(PeerDiscovery.Controller, [session])
     ]
     supervise(children, strategy: :one_for_one)
   end
 
-  defdelegate add_service(session, mod, args), to: PeerDiscovery.Supervisor
+  defdelegate start_service(session, mod, args \\ []), to: PeerDiscovery.Services
 end
