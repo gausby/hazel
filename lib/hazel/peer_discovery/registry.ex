@@ -29,12 +29,13 @@ defmodule Hazel.PeerDiscovery.Registry do
   @spec get_peers(session, info_hash, num :: pos_integer) ::
     :unknown_info_hash | peers
   def get_peers(session, info_hash, n \\ 1) when n > 0 do
-    Agent.get_and_update(via_name(session), fn registry ->
-      if Map.has_key?(registry, info_hash) do
-        Map.get_and_update(registry, info_hash, &(Enum.split(&1, n)))
-      else
+    Agent.get_and_update(via_name(session), fn
+      %{^info_hash => peers} = registry ->
+        {taken, remaining} = Enum.split(peers, n)
+        {taken, Map.put(registry, info_hash, remaining)}
+
+      registry ->
         {:unknown_info_hash, registry}
-      end
     end)
   end
 
