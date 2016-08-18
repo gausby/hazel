@@ -2,6 +2,7 @@ defmodule Hazel.PeerDiscoveryTest do
   use ExUnit.Case, async: true
 
   alias Hazel.PeerDiscovery
+  alias __MODULE__.TestService
 
   test "starting the peer discovery tree" do
     session = generate_session()
@@ -13,7 +14,7 @@ defmodule Hazel.PeerDiscoveryTest do
     assert {:ok, _pid} = generate_peer_discovery(session)
 
     assert {:ok, _pid} =
-      PeerDiscovery.start_service(session, Hazel.PeerDiscoveryTest.TestService, [foo: :bar])
+      PeerDiscovery.start_service(session, TestService, [foo: :bar])
   end
 
   defp generate_session() do
