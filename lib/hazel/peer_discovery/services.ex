@@ -15,7 +15,14 @@ defmodule Hazel.PeerDiscovery.Services do
 
   @spec start_service(session, mod :: atom, args :: Keyword.t) :: :ok
   def start_service(session, mod, args \\ []) when is_atom(mod) do
-    Supervisor.start_child(via_name(session), [mod, args])
+    case args[:source] do
+      nil ->
+        raise ArgumentError,
+          message: "a peer discovery service must have a source"
+
+      _ ->
+        Supervisor.start_child(via_name(session), [mod, [args]])
+    end
   end
 
   defmodule Service do

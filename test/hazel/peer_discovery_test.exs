@@ -14,7 +14,7 @@ defmodule Hazel.PeerDiscoveryTest do
     assert {:ok, _pid} = generate_peer_discovery(session)
 
     assert {:ok, _pid} =
-      PeerDiscovery.start_service(session, TestService, [foo: :bar])
+      PeerDiscovery.start_service(session, TestService, [source: "foo"])
   end
 
   defp generate_session() do
@@ -31,8 +31,8 @@ defmodule Hazel.PeerDiscoveryTest do
     use GenServer
 
     # Client API
-    def start_link(session, _opts) do
-      GenServer.start_link(__MODULE__, session)
+    def start_link(session, opts) do
+      GenServer.start_link(__MODULE__, session, name: via_name({session, opts[:source]}))
     end
 
     # Server callbacks
