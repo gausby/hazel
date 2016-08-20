@@ -12,9 +12,9 @@ defmodule Hazel.Acceptor.Handler do
     :ok = :ranch.accept_ack(ref)
 
     with :ok <- not_on_the_blacklist(local_id, socket),
-         {:ok, peer_id, info_hash} <- receive_handshake(socket, transport),
+         {:ok, peer_id, info_hash, complete_handshake} <- receive_handshake(socket, transport),
          {:ok, _} <- Torrent.where_is({local_id, info_hash}),
-         :ok <- PeerWire.complete_handshake(socket, transport, info_hash, local_id) do
+         :ok <- complete_handshake.(local_id, info_hash) do
       # add peer to the swarm and hand over the socket and transport
       session = {local_id, info_hash}
       {:ok, pid} = Swarm.add_peer(session, peer_id)
@@ -28,12 +28,15 @@ defmodule Hazel.Acceptor.Handler do
 
       {:error, :malformed_handshake} ->
         :ignore
+
+      {:error, :info_hash_mishmash} ->
+        :ignore
     end
   end
 
   defp receive_handshake(socket, transport) do
-    case Hazel.PeerWire.receive_handshake(socket, transport) do
-      {:ok, _peer_id, _info_hash} = result ->
+    case PeerWire.receive_handshake(socket, transport) do
+      {:ok, _peer_id, _info_hash, _complete_handshake} = result ->
         result
 
       _ ->

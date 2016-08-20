@@ -16,15 +16,17 @@ defmodule Hazel.PeerWire do
     case transport.recv(socket, 68, 5000) do
       {:ok, <<@protocol_length, @protocol, _capabilities::binary-size(8),
               info_hash::binary-size(20), peer_id::binary-size(20)>>} ->
-        {:ok, peer_id, info_hash}
+        {:ok, peer_id, info_hash, fn
+          local_id, ^info_hash ->
+            transport.send(socket, [info_hash, local_id])
+
+          _, _ ->
+            {:error, :info_hash_mishmash}
+        end}
 
       {:ok, _} ->
         {:error, :malformed_handshake}
     end
-  end
-
-  def complete_handshake(socket, transport, info_hash, local_id) do
-    transport.send(socket, [info_hash, local_id])
   end
 
   @type piece_index :: non_neg_integer
