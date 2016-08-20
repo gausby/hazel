@@ -8,6 +8,7 @@ defmodule Hazel.PeerDiscovery do
     Supervisor.start_link(__MODULE__, local_id, name: via_name(local_id))
   end
 
+  defp via_name(pid) when is_pid(pid), do: pid
   defp via_name(local_id), do: {:via, :gproc, reg_name(local_id)}
   defp reg_name(local_id), do: {:n, :l, {__MODULE__, local_id}}
 

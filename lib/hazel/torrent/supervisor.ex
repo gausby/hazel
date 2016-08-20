@@ -5,8 +5,9 @@ defmodule Hazel.Torrent.Supervisor do
     Supervisor.start_link(__MODULE__, {local_id, info_hash, opts}, name: via_name({local_id, info_hash}))
   end
 
-  defp via_name(session), do: {:via, :gproc, supervisor_name(session)}
-  defp supervisor_name({local_id, info_hash}), do: {:n, :l, {__MODULE__, local_id, info_hash}}
+  defp via_name(pid) when is_pid(pid), do: pid
+  defp via_name(session), do: {:via, :gproc, reg_name(session)}
+  defp reg_name({local_id, info_hash}), do: {:n, :l, {__MODULE__, local_id, info_hash}}
 
   def init({local_id, info_hash, opts}) do
     children = [
@@ -19,7 +20,7 @@ defmodule Hazel.Torrent.Supervisor do
   end
 
   def where_is(session) do
-    case :gproc.where(supervisor_name(session)) do
+    case :gproc.where(reg_name(session)) do
       :undefined ->
         {:error, :unknown_session}
 

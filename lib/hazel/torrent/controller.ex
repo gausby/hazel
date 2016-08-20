@@ -19,8 +19,8 @@ defmodule Hazel.Torrent.Controller do
   end
 
   defp via_name(pid) when is_pid(pid), do: pid
-  defp via_name(session), do: {:via, :gproc, controller_name(session)}
-  defp controller_name({local_id, info_hash}), do: {:n, :l, {__MODULE__, local_id, info_hash}}
+  defp via_name(session), do: {:via, :gproc, reg_name(session)}
+  defp reg_name({local_id, info_hash}), do: {:n, :l, {__MODULE__, local_id, info_hash}}
 
   @spec request_peer(pid | session, piece_index) :: :ok
   def request_peer(session, piece_index) do

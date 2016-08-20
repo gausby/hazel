@@ -7,8 +7,9 @@ defmodule Hazel.Torrent.Store.Processes do
     Supervisor.start_link(__MODULE__, {local_id, info_hash, opts}, name: via_name({local_id, info_hash}))
   end
 
-  defp via_name(session), do: {:via, :gproc, processes_name(session)}
-  defp processes_name({local_id, info_hash}), do: {:n, :l, {__MODULE__, local_id, info_hash}}
+  defp via_name(pid) when is_pid(pid), do: pid
+  defp via_name(session), do: {:via, :gproc, reg_name(session)}
+  defp reg_name({local_id, info_hash}), do: {:n, :l, {__MODULE__, local_id, info_hash}}
 
   def get_piece(session, piece_index) do
     with {:ok, pid} <- where_is(session),
@@ -48,7 +49,7 @@ defmodule Hazel.Torrent.Store.Processes do
   end
 
   defp where_is(session) do
-    case :gproc.where(processes_name(session)) do
+    case :gproc.where(reg_name(session)) do
       pid when is_pid(pid) ->
         {:ok, pid}
 
@@ -104,8 +105,9 @@ defmodule Hazel.Torrent.Store.Processes.Worker do
     GenStateMachine.start_link(__MODULE__, state, name: via_name({session, piece_number}))
   end
 
-  defp via_name(session), do: {:via, :gproc, process_name(session)}
-  defp process_name({{local_id, info_hash}, piece_number}), do: {:n, :l, {__MODULE__, local_id, info_hash, piece_number}}
+  defp via_name(pid) when is_pid(pid), do: pid
+  defp via_name(session), do: {:via, :gproc, reg_name(session)}
+  defp reg_name({{local_id, info_hash}, piece_number}), do: {:n, :l, {__MODULE__, local_id, info_hash, piece_number}}
 
   def announce_peer({session, piece_number}, peer_pid) when is_pid(peer_pid) do
     GenStateMachine.cast(via_name({session, piece_number}), {:peer, peer_pid})

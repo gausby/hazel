@@ -28,8 +28,9 @@ defmodule Hazel.Torrent.Store.BitField do
     div(length, piece_length) + (if rem(length, piece_length) == 0, do: 0, else: 1)
   end
 
-  defp via_name(session), do: {:via, :gproc, bitfield_name(session)}
-  defp bitfield_name({local_id, info_hash}), do: {:n, :l, {__MODULE__, local_id, info_hash}}
+  defp via_name(pid) when is_pid(pid), do: pid
+  defp via_name(session), do: {:via, :gproc, reg_name(session)}
+  defp reg_name({local_id, info_hash}), do: {:n, :l, {__MODULE__, local_id, info_hash}}
 
   @doc """
   Return the size of the bit field

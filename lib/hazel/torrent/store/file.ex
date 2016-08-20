@@ -31,8 +31,9 @@ defmodule Hazel.Torrent.Store.File do
     GenServer.start_link(__MODULE__, opts, name: via_name({local_id, info_hash}))
   end
 
-  defp via_name(session), do: {:via, :gproc, file_name(session)}
-  defp file_name({local_id, info_hash}), do: {:n, :l, {__MODULE__, local_id, info_hash}}
+  defp via_name(pid) when is_pid(pid), do: pid
+  defp via_name(session), do: {:via, :gproc, reg_name(session)}
+  defp reg_name({local_id, info_hash}), do: {:n, :l, {__MODULE__, local_id, info_hash}}
 
   @spec write_chunk(session, piece_index, offset, binary) ::
     {:error, :out_of_bounds} | {:error, :out_of_piece_bounds} | {:error, term} |

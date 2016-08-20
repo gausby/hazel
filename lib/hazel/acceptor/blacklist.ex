@@ -6,8 +6,8 @@ defmodule Hazel.Acceptor.Blacklist do
   end
 
   defp via_name(pid) when is_pid(pid), do: pid
-  defp via_name(local_id), do: {:via, :gproc, blacklist_name(local_id)}
-  defp blacklist_name(local_id), do: {:n, :l, {__MODULE__, local_id}}
+  defp via_name(local_id), do: {:via, :gproc, reg_name(local_id)}
+  defp reg_name(local_id), do: {:n, :l, {__MODULE__, local_id}}
 
   def member?(local_id, peer) do
     Agent.get(via_name(local_id), MapSet, :member?, [peer])

@@ -7,8 +7,9 @@ defmodule Hazel.Acceptor do
     Supervisor.start_link(__MODULE__, {local_id, opts}, name: via_name(local_id))
   end
 
-  defp via_name(local_id), do: {:via, :gproc, acceptor_name(local_id)}
-  defp acceptor_name(local_id), do: {:n, :l, {__MODULE__, local_id}}
+  defp via_name(pid) when is_pid(pid), do: pid
+  defp via_name(local_id), do: {:via, :gproc, reg_name(local_id)}
+  defp reg_name(local_id), do: {:n, :l, {__MODULE__, local_id}}
 
   def init({local_id, opts}) do
     ranch_listener =
