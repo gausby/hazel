@@ -35,8 +35,7 @@ defmodule Hazel.PeerWire do
 
   @type message ::
     :awake | {:choke, boolean} | {:interest, boolean} |
-    {:bit_field, binary} |
-    {:have, non_neg_integer} |
+    {:bit_field, binary} | {:have, non_neg_integer} |
     {:request | :cancel, piece_index, offset, byte_length} |
     {:piece, piece_index, offset, block :: binary}
 
