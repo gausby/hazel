@@ -26,6 +26,8 @@ defmodule Hazel.Torrent do
     Supervisor.start_child(via_name(local_id), [info_hash, torrent])
   end
 
+  defdelegate add_peer(session, peer_id), to: Hazel.Torrent.Swarm
+
   defdelegate where_is(session), to: Hazel.Torrent.Supervisor
 
   defdelegate request_peer(session, piece_index), to: Hazel.Torrent.Controller
