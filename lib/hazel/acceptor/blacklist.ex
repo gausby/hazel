@@ -5,6 +5,7 @@ defmodule Hazel.Acceptor.Blacklist do
     Agent.start_link(fn -> MapSet.new() end, name: via_name(local_id))
   end
 
+  defp via_name(pid) when is_pid(pid), do: pid
   defp via_name(local_id), do: {:via, :gproc, blacklist_name(local_id)}
   defp blacklist_name(local_id), do: {:n, :l, {__MODULE__, local_id}}
 
