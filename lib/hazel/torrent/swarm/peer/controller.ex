@@ -22,7 +22,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
 
   @doc false
   @spec reg_name({{session, info_hash}, peer_id}) ::
-    {:n, :l, {:atom, local_id, info_hash, peer_id}}
+    {:n, :l, {__MODULE__, local_id, info_hash, peer_id}}
   def reg_name({{local_id, info_hash}, peer_id}),
     do: {:n, :l, {__MODULE__, local_id, info_hash, peer_id}}
 
