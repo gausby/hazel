@@ -21,11 +21,14 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
   defp via_name(session), do: {:via, :gproc, reg_name(session)}
 
   @doc false
-  @spec reg_name({{session, info_hash}, peer_id}) ::
+  @spec reg_name({session, peer_id}) ::
     {:n, :l, {__MODULE__, local_id, info_hash, peer_id}}
   def reg_name({{local_id, info_hash}, peer_id}),
     do: {:n, :l, {__MODULE__, local_id, info_hash, peer_id}}
 
+  @type connection :: {transport :: :gen_tcp, socket :: :gen_tcp.socket}
+  @spec handover_socket(session, connection) ::
+    :ok | {:error, term} | no_return
   def handover_socket(session, {transport, socket} = connection) do
     case Receiver.where_is(session) do
       {:ok, pid} ->
@@ -38,26 +41,38 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
     end
   end
 
-  def request_tokens(session, something) do
-    GenServer.cast(via_name(session), {:request_tokens, something})
+  def request_tokens(session, tokens) do
+    GenServer.cast(via_name(session), {:request_tokens, tokens})
   end
 
+  @type piece_index :: non_neg_integer
+
+  @spec have(session, piece_index) :: :ok
   def have(session, piece_index) do
     GenServer.cast(via_name(session), {:have, piece_index})
   end
 
+  @spec incoming(session, Hazel.PeerWire.message) :: :ok
   def incoming(session, message) do
     GenServer.cast(via_name(session), {:receive, message})
   end
 
+  @spec outgoing(session, Hazel.PeerWire.message) :: :ok
   def outgoing(session, message) do
     GenServer.cast(via_name(session), {:transmit, message})
   end
 
+  @spec status(session) :: t
   def status(session) do
     GenServer.call(via_name(session), :get_status)
   end
 
+  @type t :: %__MODULE__{
+    interesting?: boolean(), peer_interested?: boolean(),
+    choking?: boolean(), peer_choking?: boolean(),
+    bit_field: BitFieldSet.t | nil,
+    session: {session, peer_id} | nil
+  }
   defstruct [interesting?: false, peer_interested?: false,
              choking?: true, peer_choking?: true,
              bit_field: nil, session: nil]
