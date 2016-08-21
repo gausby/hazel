@@ -18,16 +18,15 @@ defmodule Hazel.Torrent.Store do
     children = [
       worker(Store.BitField, [local_id, info_hash, Keyword.take(opts, [:length, :piece_length])]),
       worker(Store.File, [local_id, info_hash, Keyword.take(opts, [:name, :pieces, :length, :piece_length])]),
-      # todo, better name?
-      supervisor(Store.Processes, [local_id, info_hash, Keyword.take(opts, [:length, :piece_length])])
+      supervisor(Store.Piece.Supervisor, [local_id, info_hash, Keyword.take(opts, [:length, :piece_length])])
     ]
 
     supervise(children, strategy: :one_for_all)
   end
 
-  defdelegate get_piece(session, piece_index), to: Store.Processes
+  defdelegate get_piece(session, piece_index), to: Store.Piece.Supervisor
 
-  defdelegate write_chunk(session, piece_index, offset, data), to: Store.Processes.Worker
+  defdelegate write_chunk(session, piece_index, offset, data), to: Store.Piece
 
   defdelegate get_chunk(session, piece_index, offset, length), to: Store.File
 

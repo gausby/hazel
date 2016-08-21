@@ -1,6 +1,6 @@
-defmodule Hazel.Torrent.Store.ProcessesTest do
+defmodule Hazel.Torrent.Store.PieceTest do
   use ExUnit.Case, async: true
-  doctest Hazel.Torrent.Store.Processes
+  doctest Hazel.Torrent.Store.Piece.Supervisor
 
   alias Hazel.Torrent.Store
   alias Hazel.Torrent.Swarm.Peer
@@ -34,7 +34,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
       create_processes(local_id, info_hash, "foobar", [piece_length: 3])
 
     # Ask for piece, should ask the swarm for peers
-    Store.Processes.get_piece(session, 0)
+    Store.get_piece(session, 0)
     assert_receive {:got_request, 0}
     # When a peer is introduced to the swarm and then removed it
     # should request a new peer
@@ -43,7 +43,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
         Peer.Controller.reg_name({session, Hazel.generate_peer_id()})
       )
 
-    Store.Processes.Worker.announce_peer({session, 0}, peer_pid)
+    Store.Piece.announce_peer({session, 0}, peer_pid)
     Process.unlink(peer_pid)
     Process.exit(peer_pid, :kill)
     assert_receive {:got_request, 0}
@@ -65,7 +65,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
       create_processes(local_id, info_hash, "abcdefgh", [piece_length: 2])
 
     # Ask for piece, should ask the swarm for peers
-    {:ok, _pid} = Store.Processes.get_piece(session, 0)
+    {:ok, _pid} = Store.get_piece(session, 0)
     assert_receive {:got_request, 0}
 
     {:ok, peer_pid} =
@@ -78,7 +78,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
               :ok
             end]])
 
-    :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid)
+    :ok = Store.Piece.announce_peer({session, 0}, peer_pid)
 
     :ok = Peer.Controller.incoming(peer_pid, {:piece, 0, 0, "ab"})
     assert_receive {:write_result, :ok}
@@ -107,7 +107,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     %{} = create_processes(local_id, info_hash, "abcdefgh", [piece_length: 8, chunk_size: 4])
 
     # Ask for piece, should ask the swarm for peers
-    {:ok, pid} = Store.Processes.get_piece(session, 0)
+    {:ok, pid} = Store.get_piece(session, 0)
     assert_receive {:got_request, 0}
 
     # create peer, announce it, and send data
@@ -120,7 +120,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
               :ok = Store.write_chunk(session, piece_index, offset, data)
             end]])
 
-    :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid)
+    :ok = Store.Piece.announce_peer({session, 0}, peer_pid)
     :ok = Peer.Controller.incoming(peer_pid, {:piece, 0, 0, "abcd"})
     :ok = Peer.Controller.incoming(peer_pid, {:piece, 0, 4, "efgh"})
     # the manager should receive a note about us having the piece, and
@@ -151,7 +151,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     %{} = create_processes(local_id, info_hash, "abcdefgh", [piece_length: 8, chunk_size: 8])
 
     # Ask for piece, should ask the swarm for peers
-    {:ok, _pid} = Store.Processes.get_piece(session, 0)
+    {:ok, _pid} = Store.get_piece(session, 0)
     assert_receive {:got_request, 0}
 
     # create peer, announce it, and send incorrect data
@@ -167,7 +167,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
       FauxServer.start_link(
         Peer.Controller.reg_name({session, Hazel.generate_peer_id()}),
         [cb: [receive: receive_callback]])
-    :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid)
+    :ok = Store.Piece.announce_peer({session, 0}, peer_pid)
     :ok = Peer.Controller.incoming(peer_pid, {:piece, 0, 0, "abdcefhg"})
 
     assert_receive {:write_result, {:error, :invalid_data}}
@@ -179,7 +179,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
       FauxServer.start_link(
         Peer.Controller.reg_name({session, Hazel.generate_peer_id()}),
         [cb: [receive: receive_callback]])
-    :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid2)
+    :ok = Store.Piece.announce_peer({session, 0}, peer_pid2)
     :ok = Peer.Controller.incoming(peer_pid2, {:piece, 0, 0, "abcdefgh"})
 
     assert_receive {:write_result, :ok}
@@ -208,7 +208,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     %{} = create_processes(local_id, info_hash, "abcdefgh", [piece_length: 8, chunk_size: 2])
 
     # Ask for piece, should ask the swarm for peers
-    {:ok, pid} = Store.Processes.get_piece(session, 0)
+    {:ok, pid} = Store.get_piece(session, 0)
     assert_receive {:got_request, 0}
 
     receive_callback = fn {:piece, piece_index, offset, data}, state ->
@@ -225,7 +225,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
         Peer.Controller.reg_name({session, Hazel.generate_peer_id()}),
         [cb: [receive: receive_callback]])
 
-    :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid)
+    :ok = Store.Piece.announce_peer({session, 0}, peer_pid)
     :ok = Peer.Controller.incoming(peer_pid, {:piece, 0, 0, "ab"})
     assert_receive {:write_result, :ok}
     :ok = Peer.Controller.incoming(peer_pid, {:piece, 0, 2, "cd"})
@@ -241,7 +241,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
         Peer.Controller.reg_name({session, Hazel.generate_peer_id()}),
         [cb: [receive: receive_callback]])
 
-    :ok = Store.Processes.Worker.announce_peer({session, 0}, peer_pid2)
+    :ok = Store.Piece.announce_peer({session, 0}, peer_pid2)
     :ok = Peer.Controller.incoming(peer_pid2, {:piece, 0, 4, "ef"})
     assert_receive {:write_result, :ok}
     :ok = Peer.Controller.incoming(peer_pid2, {:piece, 0, 6, "gh"})
@@ -266,7 +266,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     {:ok, bitfield_pid} =
       Store.BitField.start_link(local_id, info_hash, opts)
     {:ok, processes_pid} =
-      Store.Processes.start_link(local_id, info_hash, opts)
+      Store.Piece.Supervisor.start_link(local_id, info_hash, opts)
 
     %{hashes: hashes,
       file: file_pid,
