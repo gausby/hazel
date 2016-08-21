@@ -15,7 +15,7 @@ defmodule Hazel.Torrent.Swarm.Peer do
 
   defdelegate handover_socket(session, connection), to: Controller
 
-  defdelegate have(session, piece_index), to: Controller
+  defdelegate broadcast(session, message), to: Controller
 
   def init({session, peer_id, opts}) do
     file_length = opts[:length]

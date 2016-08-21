@@ -37,9 +37,9 @@ defmodule Hazel.Torrent.ControllerTest do
       FauxServer.start_link(
         peer_controller_reg_name({session, peer_id}),
         [cb: [
-            have:
-            fn piece_index, state ->
-              send state[:pid], {:have, piece_index}
+            broadcast:
+            fn message, state ->
+              send state[:pid], message
               :ok
             end]])
     {:ok, {session, peer_id}}

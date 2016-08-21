@@ -118,6 +118,6 @@ defmodule Hazel.Torrent.Swarm.Peer.ControllerTest do
     {session, peer_id} = generate_session()
     {:ok, pid} = Controller.start_link(session, peer_id, [])
 
-    assert :ok = Controller.have(pid, 1)
+    assert :ok = Controller.broadcast(pid, {:have, 1})
   end
 end

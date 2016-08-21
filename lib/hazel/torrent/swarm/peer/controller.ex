@@ -45,11 +45,9 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
     GenServer.cast(via_name(session), {:request_tokens, tokens})
   end
 
-  @type piece_index :: non_neg_integer
-
-  @spec have(session, piece_index) :: :ok
-  def have(session, piece_index) do
-    GenServer.cast(via_name(session), {:have, piece_index})
+  @spec broadcast(session, Hazel.PeerWire.message) :: :ok
+  def broadcast(session, message) do
+    GenServer.cast(via_name(session), {:broadcast, message})
   end
 
   @spec incoming(session, Hazel.PeerWire.message) :: :ok
@@ -99,9 +97,18 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
     {:reply, Map.drop(state, [:session]), state}
   end
 
-  def handle_cast({:have, piece_index}, state) do
-    :ok = Transmitter.prepend(state.session, {:have, piece_index})
-    {:noreply, state}
+  def handle_cast({:broadcast, message}, state) do
+    case handle_broadcast(message, state) do
+      {:ok, :no_change} ->
+        {:noreply, state}
+
+      {:ok, state} ->
+        {:noreply, update_status(state)}
+
+      {:error, _reason} ->
+        # IO.inspect reason
+        {:stop, :normal, state}
+    end
   end
 
   def handle_cast({:request_tokens, _pid}, state) do
@@ -130,6 +137,13 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
         # IO.inspect reason
         {:stop, :normal, state}
     end
+  end
+
+  #=Broadcast ========================================================
+  # Triggered when the message is put into the transmitter queue.
+  defp handle_broadcast({:have, _} = message, state) do
+    :ok = Transmitter.prepend(state.session, message)
+    {:ok, :no_change}
   end
 
   #=Outgoing =========================================================

@@ -29,7 +29,7 @@ defmodule Hazel.Torrent.Controller do
 
   @spec broadcast_piece(pid | session, piece_index) :: :ok
   def broadcast_piece(session, piece_index) do
-    GenServer.cast(via_name(session), {:broadcast_piece, piece_index})
+    GenServer.cast(via_name(session), {:broadcast, {:have, piece_index}})
   end
 
   # Server callbacks
@@ -38,10 +38,10 @@ defmodule Hazel.Torrent.Controller do
     {:ok, state}
   end
 
-  def handle_cast({:broadcast_piece, piece_index}, state) do
+  def handle_cast({:broadcast, message}, state) do
     state.session
     |> Query.all()
-    |> Stream.each(fn peer -> apply(Peer, :have, [peer, piece_index]) end)
+    |> Stream.each(fn peer -> apply(Peer, :broadcast, [peer, message]) end)
     |> Stream.run()
 
     {:noreply, state}

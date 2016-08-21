@@ -98,9 +98,9 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
             :ok
           end,
 
-          broadcast_piece:
-          fn piece_index, state ->
-            send state[:pid], {:broadcast_piece, piece_index}
+          broadcast:
+          fn message, state ->
+            send state[:pid], {:broadcast, message}
             :ok
           end]])
 
@@ -125,7 +125,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     :ok = Peer.Controller.incoming(peer_pid, {:piece, 0, 4, "efgh"})
     # the manager should receive a note about us having the piece, and
     # the download process should be terminated
-    assert_receive {:broadcast_piece, 0}
+    assert_receive {:broadcast, {:have, 0}}
     refute Process.alive? pid # todo: fail from time to time
   end
 
@@ -142,9 +142,9 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
             :ok
           end,
 
-          broadcast_piece:
+          broadcast:
           fn piece_index, state ->
-            send state[:pid], {:broadcast_piece, piece_index}
+            send state[:pid], {:broadcast, piece_index}
             :ok
           end]])
 
@@ -183,7 +183,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     :ok = Peer.Controller.incoming(peer_pid2, {:piece, 0, 0, "abcdefgh"})
 
     assert_receive {:write_result, :ok}
-    assert_receive {:broadcast_piece, 0}
+    assert_receive {:broadcast, {:have, 0}}
   end
 
   test "should continue fetching data from another peer if connection is dropped",
@@ -199,9 +199,9 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
             :ok
           end,
 
-          broadcast_piece:
-          fn piece_index, state ->
-            send state[:pid], {:broadcast_piece, piece_index}
+          broadcast:
+          fn message, state ->
+            send state[:pid], {:broadcast, message}
             :ok
           end]])
 
@@ -247,7 +247,7 @@ defmodule Hazel.Torrent.Store.ProcessesTest do
     :ok = Peer.Controller.incoming(peer_pid2, {:piece, 0, 6, "gh"})
     assert_receive {:write_result, :ok}
 
-    assert_receive {:broadcast_piece, 0}
+    assert_receive {:broadcast, {:have, 0}}
     refute Process.alive?(pid)
   end
 
