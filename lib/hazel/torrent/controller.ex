@@ -2,8 +2,7 @@ defmodule Hazel.Torrent.Controller do
   @moduledoc false
   use GenServer
 
-  alias Hazel.Torrent.Swarm.Query
-  alias Hazel.Torrent.Swarm.Peer
+  alias Hazel.Torrent.Swarm.{Query, Peer}
 
   @type local_id :: binary
   @type info_hash :: binary
