@@ -11,14 +11,7 @@ defmodule Hazel.Torrent do
   defp via_name(local_id), do: {:via, :gproc, reg_name(local_id)}
   defp reg_name(local_id), do: {:n, :l, {__MODULE__, local_id}}
 
-  def init(local_id) do
-    children = [
-      supervisor(Hazel.Torrent.Supervisor, [local_id])
-    ]
-
-    supervise(children, strategy: :simple_one_for_one)
-  end
-
+  # client api
   @doc """
   Add a new torrent for download/upload
   """
@@ -33,4 +26,13 @@ defmodule Hazel.Torrent do
   defdelegate request_peer(session, piece_index), to: Hazel.Torrent.Controller
 
   defdelegate broadcast_piece(session, piece_index), to: Hazel.Torrent.Controller
+
+  # server callbacks
+  def init(local_id) do
+    children = [
+      supervisor(Hazel.Torrent.Supervisor, [local_id])
+    ]
+
+    supervise(children, strategy: :simple_one_for_one)
+  end
 end
