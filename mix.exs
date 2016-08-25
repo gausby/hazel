@@ -16,7 +16,7 @@ defmodule Hazel.Mixfile do
   defp elixirc_paths(_),     do: ["lib"]
 
   def application() do
-    [applications: [:logger, :gproc, :ranch, :gen_stage, :gen_state_machine]]
+    [applications: [:logger, :crypto, :gproc, :ranch, :gen_stage, :gen_state_machine]]
   end
 
   defp deps() do
