@@ -119,6 +119,9 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
 
   def handle_cast({:receive, message}, state) do
     case handle_in(message, state) do
+      {:ok, :no_change} ->
+        {:noreply, state}
+
       {:ok, state} ->
         {:noreply, update_status(state)}
 
@@ -165,8 +168,8 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
   #=Incoming =========================================================
   # Triggered when the receiver process has received a full message
   # from the remote.
-  defp handle_in(:awake, state) do
-    {:ok, state}
+  defp handle_in(:awake, _state) do
+    {:ok, :no_change}
   end
 
   defp handle_in({:choke, choking?}, state) do
@@ -199,23 +202,23 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
     {:ok, %{state|bit_field: BitFieldSet.set(bit_field, piece_index)}}
   end
 
-  defp handle_in({:request, piece_index, offset, byte_length}, state) do
+  defp handle_in({:request, piece_index, offset, byte_length}, _state) do
     # - Should only respond to this if we have the given piece_index
     # - Add this request to the transmitter queue
     IO.inspect {:request, piece_index, offset, byte_length}
-    {:ok, state}
+    {:ok, :no_change}
   end
 
-  defp handle_in({:cancel, piece_index, offset, byte_length}, state) do
+  defp handle_in({:cancel, piece_index, offset, byte_length}, _state) do
     # - Remove request from job queue in transmitter
     IO.inspect {:cancel, piece_index, offset, byte_length}
-    {:ok, state}
+    {:ok, :no_change}
   end
 
-  defp handle_in({:piece, piece_index, offset, data}, %{session: {session, _}} = state) do
+  defp handle_in({:piece, piece_index, offset, data}, %{session: {session, _}}) do
     # this call should probably be sync so we can kill the connection
     # if we are trying to write to something that doesn't exist
     :ok = Store.write_chunk(session, piece_index, offset, data)
-    {:ok, state}
+    {:ok, :no_change}
   end
 end
