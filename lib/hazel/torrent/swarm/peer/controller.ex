@@ -133,6 +133,9 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
 
   def handle_cast({:transmit, message}, state) do
     case handle_out(message, state) do
+      {:ok, :no_change} ->
+        {:noreply, state}
+
       {:ok, state} ->
         {:noreply, update_status(state)}
 
@@ -161,8 +164,8 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
     {:ok, %{state|interesting?: interest?}}
   end
 
-  defp handle_out(_, state) do
-    {:ok, state}
+  defp handle_out(_, _state) do
+    {:ok, :no_change}
   end
 
   #=Incoming =========================================================
