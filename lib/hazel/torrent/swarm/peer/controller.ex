@@ -99,7 +99,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
 
   def handle_cast({:broadcast, message}, state) do
     case handle_broadcast(message, state) do
-      {:ok, :no_change} ->
+      {:ok, :keep_state} ->
         {:noreply, state}
 
       {:ok, state} ->
@@ -119,7 +119,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
 
   def handle_cast({:receive, message}, state) do
     case handle_in(message, state) do
-      {:ok, :no_change} ->
+      {:ok, :keep_state} ->
         {:noreply, state}
 
       {:ok, state} ->
@@ -133,7 +133,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
 
   def handle_cast({:transmit, message}, state) do
     case handle_out(message, state) do
-      {:ok, :no_change} ->
+      {:ok, :keep_state} ->
         {:noreply, state}
 
       {:ok, state} ->
@@ -149,7 +149,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
   # Triggered when the message is put into the transmitter queue.
   defp handle_broadcast({:have, _} = message, state) do
     :ok = Transmitter.prepend(state.session, message)
-    {:ok, :no_change}
+    {:ok, :keep_state}
   end
 
   #=Outgoing =========================================================
@@ -165,14 +165,14 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
   end
 
   defp handle_out(_, _state) do
-    {:ok, :no_change}
+    {:ok, :keep_state}
   end
 
   #=Incoming =========================================================
   # Triggered when the receiver process has received a full message
   # from the remote.
   defp handle_in(:awake, _state) do
-    {:ok, :no_change}
+    {:ok, :keep_state}
   end
 
   defp handle_in({:choke, choking?}, state) do
@@ -209,19 +209,19 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
     # - Should only respond to this if we have the given piece_index
     # - Add this request to the transmitter queue
     IO.inspect {:request, piece_index, offset, byte_length}
-    {:ok, :no_change}
+    {:ok, :keep_state}
   end
 
   defp handle_in({:cancel, piece_index, offset, byte_length}, _state) do
     # - Remove request from job queue in transmitter
     IO.inspect {:cancel, piece_index, offset, byte_length}
-    {:ok, :no_change}
+    {:ok, :keep_state}
   end
 
   defp handle_in({:piece, piece_index, offset, data}, %{session: {session, _}}) do
     # this call should probably be sync so we can kill the connection
     # if we are trying to write to something that doesn't exist
     :ok = Store.write_chunk(session, piece_index, offset, data)
-    {:ok, :no_change}
+    {:ok, :keep_state}
   end
 end
