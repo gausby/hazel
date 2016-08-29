@@ -1,4 +1,4 @@
-defmodule FauxAcceptor do
+defmodule Hazel.TestHelpers.FauxAcceptor do
   @moduledoc """
   Create a TCP-acceptor that will create network sockets for testing
   """
@@ -8,10 +8,8 @@ defmodule FauxAcceptor do
 
   # Client API
   def start_link(controller_mod) do
-    GenServer.start_link(
-      __MODULE__,
-      %__MODULE__{controller_mod: controller_mod}
-    )
+    initial_state = %__MODULE__{controller_mod: controller_mod}
+    GenServer.start_link(__MODULE__, initial_state)
   end
 
   def get_info(pid),
@@ -33,7 +31,7 @@ defmodule FauxAcceptor do
   def handle_cast({:accept, process_pid}, state) do
     {:ok, client} = :gen_tcp.accept(state.socket)
     :ok = :gen_tcp.controlling_process(client, process_pid)
-    :ok = state.controller_mod.handover_socket(process_pid, {:gen_tcp, client})
+    :ok = apply(state.controller_mod, :handover_socket, [process_pid, {:gen_tcp, client}])
     {:noreply, state}
   end
 end

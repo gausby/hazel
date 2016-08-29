@@ -4,7 +4,7 @@ defmodule Hazel.Torrent.Swarm.Peer.ReceiverTest do
   import Hazel.TestHelpers, only: [generate_peer_id: 0]
 
   alias Hazel.PeerWire
-  alias Hazel.TestHelpers.FauxServer
+  alias Hazel.TestHelpers.{FauxAcceptor, FauxServer}
   alias Hazel.Torrent.Swarm.Peer.{Controller, Receiver}
 
   defp generate_session() do
