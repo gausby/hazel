@@ -27,10 +27,10 @@ defmodule Hazel.AcceptorTest do
     opts = Keyword.merge(opts, [name: :ram])
 
     Torrent.start_link(local_id)
-    :gproc.await({:n, :l, {Torrent, local_id}})
+    :gproc.await(Torrent.reg_name(local_id))
 
     Torrent.add(local_id, info_hash, opts)
-    :gproc.await({:n, :l, {Torrent.Supervisor, local_id, info_hash}})
+    :gproc.await(Torrent.Supervisor.reg_name({local_id, info_hash}))
     :ok
   end
 

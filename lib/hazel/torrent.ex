@@ -9,7 +9,9 @@ defmodule Hazel.Torrent do
 
   defp via_name(pid) when is_pid(pid), do: pid
   defp via_name(local_id), do: {:via, :gproc, reg_name(local_id)}
-  defp reg_name(local_id), do: {:n, :l, {__MODULE__, local_id}}
+
+  @doc false
+  def reg_name(local_id), do: {:n, :l, {__MODULE__, local_id}}
 
   # client api
   @doc """
