@@ -11,7 +11,9 @@ defmodule Hazel.Torrent.Swarm.Peer do
 
   defp via_name(pid) when is_pid(pid), do: pid
   defp via_name(session), do: {:via, :gproc, reg_name(session)}
-  defp reg_name({{local_id, info_hash}, peer_id}), do: {:n, :l, {__MODULE__, local_id, info_hash, peer_id}}
+
+  def reg_name({{local_id, info_hash}, peer_id}),
+    do: {:n, :l, {__MODULE__, local_id, info_hash, peer_id}}
 
   defdelegate handover_socket(session, connection), to: Controller
 

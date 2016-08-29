@@ -7,6 +7,8 @@ defmodule Hazel.AcceptorTest do
                                    create_acceptor: 1,
                                    create_handshake: 2]
 
+  alias Hazel.Torrent
+
   setup do
     file_data = :crypto.strong_rand_bytes(120)
     torrent_file = create_torrent_file(file_data, [piece_length: 30])
@@ -24,11 +26,11 @@ defmodule Hazel.AcceptorTest do
   defp create_torrent_and_add_file(local_id, info_hash, opts) do
     opts = Keyword.merge(opts, [name: :ram])
 
-    Hazel.Torrent.start_link(local_id)
-    :gproc.await({:n, :l, {Hazel.Torrent, local_id}})
+    Torrent.start_link(local_id)
+    :gproc.await({:n, :l, {Torrent, local_id}})
 
-    Hazel.Torrent.add(local_id, info_hash, opts)
-    :gproc.await({:n, :l, {Hazel.Torrent.Supervisor, local_id, info_hash}})
+    Torrent.add(local_id, info_hash, opts)
+    :gproc.await({:n, :l, {Torrent.Supervisor, local_id, info_hash}})
     :ok
   end
 
@@ -67,6 +69,7 @@ defmodule Hazel.AcceptorTest do
     test "a client should get connected to a swarm", context do
       local_id = context[:peer_id]
       info_hash = context[:info_hash]
+      session = {local_id, info_hash}
 
       :ok = create_torrent_and_add_file(local_id, info_hash, context[:torrent_file])
       {ip, port} = create_acceptor(local_id)
@@ -75,7 +78,7 @@ defmodule Hazel.AcceptorTest do
       peer_id = generate_peer_id()
       :gen_tcp.send(connection, create_handshake(peer_id, info_hash))
       {:ok, _} = :gen_tcp.recv(connection, 68, 5000)
-      {pid, _} = :gproc.await({:n, :l, {Hazel.Torrent.Swarm.Peer, local_id, info_hash, peer_id}}, 5000)
+      {pid, _} = :gproc.await(Torrent.Swarm.Peer.reg_name({session, peer_id}), 5000)
       assert is_pid(pid)
     end
   end
