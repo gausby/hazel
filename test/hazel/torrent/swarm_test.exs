@@ -1,12 +1,14 @@
 defmodule Hazel.Torrent.SwarmTest do
   use ExUnit.Case, async: true
 
+  import Hazel.TestHelpers, only: [generate_peer_id: 0]
+
   alias Hazel.Torrent.Swarm
   alias Hazel.Torrent.Swarm.Peer.Controller
   alias Hazel.Torrent.Store.BitField
 
   defp generate_session(opts \\ [length: 200, piece_length: 10]) do
-    local_id = Hazel.generate_peer_id()
+    local_id = generate_peer_id()
     info_hash = :crypto.strong_rand_bytes(20)
 
     BitField.start_link(local_id, info_hash, Keyword.take(opts, [:length, :piece_length]))
@@ -16,7 +18,7 @@ defmodule Hazel.Torrent.SwarmTest do
 
   defp generate_peer(session, orders) do
     orders = Keyword.merge([incoming: [], outgoing: []], orders)
-    peer_id = Hazel.generate_peer_id()
+    peer_id = generate_peer_id()
     {:ok, pid} = Controller.start_link(session, peer_id, [])
     Enum.each(orders[:incoming], &(Controller.incoming(pid, &1)))
     Enum.each(orders[:outgoing], &(Controller.outgoing(pid, &1)))

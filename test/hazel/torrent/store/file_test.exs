@@ -2,11 +2,13 @@ defmodule Hazel.Torrent.Store.FileTest do
   use ExUnit.Case, async: true
   doctest Hazel.Torrent.Store.File
 
+  import Hazel.TestHelpers, only: [generate_peer_id: 0]
+
   alias Hazel.Torrent.Store
 
   setup do
     context =
-      %{peer_id: Hazel.generate_peer_id(),
+      %{peer_id: generate_peer_id(),
         info_hash: :crypto.strong_rand_bytes(20)}
 
     {:ok, context}

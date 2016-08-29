@@ -3,12 +3,10 @@ defmodule Hazel.PeerDiscovery.Service.HttpTrackerTest do
 
   alias Hazel.PeerDiscovery.Service.HttpTracker
 
-  test "start a HTTP tracker service" do
-    session = generate_session()
-    {:ok, _pid} = HttpTracker.start_link(session, source: "foo")
-  end
+  import Hazel.TestHelpers, only: [generate_peer_id: 0]
 
-  defp generate_session() do
-    Hazel.generate_peer_id()
+  test "start a HTTP tracker service" do
+    session = generate_peer_id()
+    {:ok, _pid} = HttpTracker.start_link(session, source: "foo")
   end
 end

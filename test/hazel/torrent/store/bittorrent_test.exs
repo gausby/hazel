@@ -2,12 +2,14 @@ defmodule Hazel.Torrent.Store.BitFieldTest do
   use ExUnit.Case, async: true
   doctest Hazel.Torrent.Store.BitField
 
+  import Hazel.TestHelpers, only: [generate_peer_id: 0]
+
   alias Hazel.Torrent.Store.BitField
 
   setup do
     context =
       %{info_hash: :crypto.strong_rand_bytes(20),
-        peer_id: Hazel.generate_peer_id()}
+        peer_id: generate_peer_id()}
 
     {:ok, context}
   end

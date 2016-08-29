@@ -1,6 +1,8 @@
 defmodule Hazel.Torrent.ControllerTest do
   use ExUnit.Case, async: true
 
+  import Hazel.TestHelpers, only: [generate_peer_id: 0]
+
   alias Hazel.Torrent
   alias Hazel.Torrent.Swarm.Peer
 
@@ -18,7 +20,7 @@ defmodule Hazel.Torrent.ControllerTest do
   end
 
   defp generate_session() do
-    local_id = Hazel.generate_peer_id()
+    local_id = generate_peer_id()
     info_hash = :crypto.strong_rand_bytes(20)
     {local_id, info_hash}
   end
@@ -32,7 +34,7 @@ defmodule Hazel.Torrent.ControllerTest do
   end
 
   defp add_peer_to_swarm(session) do
-    peer_id = Hazel.generate_peer_id()
+    peer_id = generate_peer_id()
     {:ok, _pid} =
       FauxServer.start_link(
         peer_controller_reg_name({session, peer_id}),

@@ -3,13 +3,15 @@ defmodule Hazel.PeerDiscovery.RegistryTest do
 
   alias Hazel.PeerDiscovery.Registry
 
+  import Hazel.TestHelpers, only: [generate_peer_id: 0]
+
   test "start a registry" do
-    session = generate_session()
+    session = generate_peer_id()
     assert {:ok, _pid} = generate_registry(session)
   end
 
   test "add a peer to the registry" do
-    session = generate_session()
+    session = generate_peer_id()
     info_hash = :crypto.strong_rand_bytes(20)
     {:ok, pid} = generate_registry(session)
 
@@ -17,7 +19,7 @@ defmodule Hazel.PeerDiscovery.RegistryTest do
   end
 
   test "add a peers to the registry and get them" do
-    session = generate_session()
+    session = generate_peer_id()
     info_hash = :crypto.strong_rand_bytes(20)
     peer_num = 3
     {:ok, pid} = generate_registry(session)
@@ -28,7 +30,7 @@ defmodule Hazel.PeerDiscovery.RegistryTest do
   end
 
   test "getting from an unknown info_hash" do
-    session = generate_session()
+    session = generate_peer_id()
     info_hash = :crypto.strong_rand_bytes(20)
     info_hash2 = :crypto.strong_rand_bytes(20)
     peer_num = 2
@@ -40,7 +42,7 @@ defmodule Hazel.PeerDiscovery.RegistryTest do
   end
 
   test "dropping peers for a given info_hash" do
-    session = generate_session()
+    session = generate_peer_id()
     info_hash = :crypto.strong_rand_bytes(20)
     peer_num = 2
     {:ok, pid} = generate_registry(session)
@@ -52,14 +54,10 @@ defmodule Hazel.PeerDiscovery.RegistryTest do
   end
 
   test "dropping peers for an unknown info_hash" do
-    session = generate_session()
+    session = generate_peer_id()
     info_hash = :crypto.strong_rand_bytes(20)
     {:ok, pid} = generate_registry(session)
     assert :ok = Registry.drop(pid, info_hash)
-  end
-
-  defp generate_session() do
-    Hazel.generate_peer_id()
   end
 
   defp generate_registry(session) do

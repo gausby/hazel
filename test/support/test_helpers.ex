@@ -1,6 +1,10 @@
 defmodule Hazel.TestHelpers do
   @moduledoc false
 
+  def generate_peer_id() do
+    Hazel.generate_peer_id()
+  end
+
   # Create an TCP acceptor and return its IP and port number
   def create_acceptor(local_id) do
     Hazel.Acceptor.start_link(local_id, [port: 0])

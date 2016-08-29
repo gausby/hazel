@@ -1,12 +1,14 @@
 defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
   use ExUnit.Case, async: true
 
+  import Hazel.TestHelpers, only: [generate_peer_id: 0]
+
   alias Hazel.TestHelpers.FauxServer
   alias Hazel.Torrent.Swarm.Peer.{Controller, Transmitter}
 
   defp generate_session() do
-    local_id = Hazel.generate_peer_id()
-    peer_id = Hazel.generate_peer_id()
+    local_id = generate_peer_id()
+    peer_id = generate_peer_id()
     info_hash = :crypto.strong_rand_bytes(20)
 
     {{local_id, info_hash}, peer_id}

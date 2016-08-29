@@ -1,7 +1,8 @@
 defmodule Hazel.AcceptorTest do
   use ExUnit.Case, async: true
 
-  import Hazel.TestHelpers, only: [create_torrent_file: 2,
+  import Hazel.TestHelpers, only: [generate_peer_id: 0,
+                                   create_torrent_file: 2,
                                    encode_torrent_file: 1,
                                    create_acceptor: 1,
                                    create_handshake: 2]
@@ -12,7 +13,7 @@ defmodule Hazel.AcceptorTest do
     dot_torrent = encode_torrent_file(torrent_file)
     {_, info_hash} = Bencode.decode_with_info_hash!(dot_torrent)
 
-    peer_id = Hazel.generate_peer_id()
+    peer_id = generate_peer_id()
 
     %{peer_id: peer_id,
       info_hash: info_hash,
@@ -54,7 +55,7 @@ defmodule Hazel.AcceptorTest do
       {ip, port} = create_acceptor(local_id)
       {:ok, connection} = :gen_tcp.connect(ip, port, active: false)
 
-      :gen_tcp.send(connection, create_handshake(Hazel.generate_peer_id(), info_hash))
+      :gen_tcp.send(connection, create_handshake(generate_peer_id(), info_hash))
       expected_handshake = IO.iodata_to_binary(create_handshake(local_id, info_hash))
 
       assert {:ok, actual_handshake} = :gen_tcp.recv(connection, 68, 5000)
@@ -71,7 +72,7 @@ defmodule Hazel.AcceptorTest do
       {ip, port} = create_acceptor(local_id)
       {:ok, connection} = :gen_tcp.connect(ip, port, active: false)
 
-      peer_id = Hazel.generate_peer_id()
+      peer_id = generate_peer_id()
       :gen_tcp.send(connection, create_handshake(peer_id, info_hash))
       {:ok, _} = :gen_tcp.recv(connection, 68, 5000)
       {pid, _} = :gproc.await({:n, :l, {Hazel.Torrent.Swarm.Peer, local_id, info_hash, peer_id}}, 5000)

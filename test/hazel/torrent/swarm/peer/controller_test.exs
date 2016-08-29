@@ -1,12 +1,14 @@
 defmodule Hazel.Torrent.Swarm.Peer.ControllerTest do
   use ExUnit.Case, async: true
 
+  import Hazel.TestHelpers, only: [generate_peer_id: 0]
+
   alias Hazel.Torrent.Swarm.Peer.Controller
   alias Hazel.Torrent.Store.BitField
 
   defp generate_session(opts \\ [length: 200, piece_length: 10]) do
-    local_id = Hazel.generate_peer_id()
-    peer_id = Hazel.generate_peer_id()
+    local_id = generate_peer_id()
+    peer_id = generate_peer_id()
     info_hash = :crypto.strong_rand_bytes(20)
 
     BitField.start_link(local_id, info_hash, Keyword.take(opts, [:length, :piece_length]))

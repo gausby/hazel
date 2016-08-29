@@ -2,13 +2,15 @@ defmodule Hazel.Torrent.Store.PieceTest do
   use ExUnit.Case, async: true
   doctest Hazel.Torrent.Store.Piece.Supervisor
 
+  import Hazel.TestHelpers, only: [generate_peer_id: 0]
+
   alias Hazel.Torrent.Store
   alias Hazel.Torrent.Swarm.Peer
   alias Hazel.TestHelpers.FauxServer
 
   setup do
     context =
-      %{local_id: Hazel.generate_peer_id(),
+      %{local_id: generate_peer_id(),
         info_hash: :crypto.strong_rand_bytes(20)}
 
     {:ok, context}
@@ -40,7 +42,7 @@ defmodule Hazel.Torrent.Store.PieceTest do
     # should request a new peer
     {:ok, peer_pid} =
       FauxServer.start_link(
-        Peer.Controller.reg_name({session, Hazel.generate_peer_id()})
+        Peer.Controller.reg_name({session, generate_peer_id()})
       )
 
     Store.Piece.announce_peer({session, 0}, peer_pid)
@@ -70,7 +72,7 @@ defmodule Hazel.Torrent.Store.PieceTest do
 
     {:ok, peer_pid} =
       FauxServer.start_link(
-        Peer.Controller.reg_name({session, Hazel.generate_peer_id()}),
+        Peer.Controller.reg_name({session, generate_peer_id()}),
         [cb: [
             receive:
             fn {:piece, piece_index, offset, data}, state ->
@@ -113,7 +115,7 @@ defmodule Hazel.Torrent.Store.PieceTest do
     # create peer, announce it, and send data
     {:ok, peer_pid} =
       FauxServer.start_link(
-        Peer.Controller.reg_name({session, Hazel.generate_peer_id()}),
+        Peer.Controller.reg_name({session, generate_peer_id()}),
         [cb: [
             receive:
             fn {:piece, piece_index, offset, data}, _state ->
@@ -165,7 +167,7 @@ defmodule Hazel.Torrent.Store.PieceTest do
       end
     {:ok, peer_pid} =
       FauxServer.start_link(
-        Peer.Controller.reg_name({session, Hazel.generate_peer_id()}),
+        Peer.Controller.reg_name({session, generate_peer_id()}),
         [cb: [receive: receive_callback]])
     :ok = Store.Piece.announce_peer({session, 0}, peer_pid)
     :ok = Peer.Controller.incoming(peer_pid, {:piece, 0, 0, "abdcefhg"})
@@ -177,7 +179,7 @@ defmodule Hazel.Torrent.Store.PieceTest do
     # create a new peer, announce it, and send the correct data
     {:ok, peer_pid2} =
       FauxServer.start_link(
-        Peer.Controller.reg_name({session, Hazel.generate_peer_id()}),
+        Peer.Controller.reg_name({session, generate_peer_id()}),
         [cb: [receive: receive_callback]])
     :ok = Store.Piece.announce_peer({session, 0}, peer_pid2)
     :ok = Peer.Controller.incoming(peer_pid2, {:piece, 0, 0, "abcdefgh"})
@@ -222,7 +224,7 @@ defmodule Hazel.Torrent.Store.PieceTest do
     # create peer, announce it, and send some of the data
     {:ok, peer_pid} =
       FauxServer.start_link(
-        Peer.Controller.reg_name({session, Hazel.generate_peer_id()}),
+        Peer.Controller.reg_name({session, generate_peer_id()}),
         [cb: [receive: receive_callback]])
 
     :ok = Store.Piece.announce_peer({session, 0}, peer_pid)
@@ -238,7 +240,7 @@ defmodule Hazel.Torrent.Store.PieceTest do
     # create a new peer, announce it and send the rest of the data
     {:ok, peer_pid2} =
       FauxServer.start_link(
-        Peer.Controller.reg_name({session, Hazel.generate_peer_id()}),
+        Peer.Controller.reg_name({session, generate_peer_id()}),
         [cb: [receive: receive_callback]])
 
     :ok = Store.Piece.announce_peer({session, 0}, peer_pid2)
