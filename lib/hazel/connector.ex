@@ -1,4 +1,4 @@
-defmodule Hazel.Acceptor do
+defmodule Hazel.Connector do
   @moduledoc false
 
   use Supervisor
@@ -9,17 +9,19 @@ defmodule Hazel.Acceptor do
 
   defp via_name(pid) when is_pid(pid), do: pid
   defp via_name(local_id), do: {:via, :gproc, reg_name(local_id)}
-  defp reg_name(local_id), do: {:n, :l, {__MODULE__, local_id}}
+
+  @doc false
+  def reg_name(local_id), do: {:n, :l, {__MODULE__, local_id}}
 
   def init({local_id, opts}) do
     ranch_listener =
       :ranch.child_spec(
         {__MODULE__, local_id}, 10, :ranch_tcp,
         Keyword.take(opts, [:port]),
-        Hazel.Acceptor.Handler, local_id)
+        Hazel.Connector.Handler, local_id)
 
     children = [
-      supervisor(Hazel.Acceptor.Blacklist, [local_id]),
+      supervisor(Hazel.Connector.Blacklist, [local_id]),
       ranch_listener
     ]
     supervise(children, strategy: :one_for_one)

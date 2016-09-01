@@ -7,9 +7,9 @@ defmodule Hazel.TestHelpers do
 
   # Create an TCP acceptor and return its IP and port number
   def create_acceptor(local_id) do
-    Hazel.Acceptor.start_link(local_id, [port: 0])
-    :gproc.await({:n, :l, {Hazel.Acceptor, local_id}})
-    :ranch.get_addr({Hazel.Acceptor, local_id})
+    Hazel.Connector.start_link(local_id, [port: 0])
+    :gproc.await(Hazel.Connector.reg_name(local_id))
+    :ranch.get_addr({Hazel.Connector, local_id})
   end
 
   # Create a valid handshake

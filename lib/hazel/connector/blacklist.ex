@@ -1,4 +1,4 @@
-defmodule Hazel.Acceptor.Blacklist do
+defmodule Hazel.Connector.Blacklist do
   @moduledoc false
 
   def start_link(<<local_id::binary-size(20)>>) do

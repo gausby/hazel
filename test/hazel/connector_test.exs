@@ -1,4 +1,4 @@
-defmodule Hazel.AcceptorTest do
+defmodule Hazel.ConnectorTest do
   use ExUnit.Case, async: true
 
   import Hazel.TestHelpers, only: [generate_peer_id: 0,

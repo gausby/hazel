@@ -1,4 +1,4 @@
-defmodule Hazel.Acceptor.Handler do
+defmodule Hazel.Connector.Handler do
   @behaviour :ranch_protocol
 
   alias Hazel.{PeerWire, Torrent, Torrent.Swarm}
@@ -47,7 +47,7 @@ defmodule Hazel.Acceptor.Handler do
   defp not_on_the_blacklist(local_id, socket) do
     {:ok, remote} = :inet.peername(socket)
 
-    if Hazel.Acceptor.Blacklist.member?(local_id, remote),
+    if Hazel.Connector.Blacklist.member?(local_id, remote),
       do: {:error, :peer_is_blacklisted},
       else: :ok
   end

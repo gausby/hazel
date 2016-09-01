@@ -23,7 +23,7 @@ defmodule Hazel.Supervisor do
   def init({local_id, opts}) do
     children = [
       # resource manager
-      supervisor(Hazel.Acceptor, [local_id, opts]),
+      supervisor(Hazel.Connector, [local_id, opts]),
       supervisor(Hazel.PeerDiscovery, [local_id]),
       supervisor(Hazel.Torrent, [local_id])
     ]
