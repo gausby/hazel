@@ -15,9 +15,7 @@ defmodule Hazel.ConnectorTest do
     dot_torrent = encode_torrent_file(torrent_file)
     {_, info_hash} = Bencode.decode_with_info_hash!(dot_torrent)
 
-    peer_id = generate_peer_id()
-
-    %{peer_id: peer_id,
+    %{peer_id: generate_peer_id(),
       info_hash: info_hash,
       file_data: file_data,
       torrent_file: torrent_file}
