@@ -43,7 +43,7 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
     assert is_pid(pid)
   end
 
-  test "appending an awake message to the job queue" do
+  test "appending a keep alive message to the job queue" do
     session = generate_session()
     {:ok, pid} = start_transmitter(session)
 
@@ -51,13 +51,13 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
 
     {:ok, _client} = create_and_attach_client_to_transmitter(pid)
     :timer.sleep 100
-    Transmitter.append(pid, :awake)
+    Transmitter.append(pid, :keep_alive)
 
     {_current_state, internal_state} = get_current_state(pid)
-    assert %Transmitter{job_queue: {[:awake], []}} = internal_state
+    assert %Transmitter{job_queue: {[:keep_alive], []}} = internal_state
   end
 
-  test "transmitting an awake message" do
+  test "transmitting a keep alive message" do
     session = generate_session()
     {:ok, pid} = start_transmitter(session)
     FauxServer.start_link(
@@ -72,14 +72,14 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
 
     {:ok, client} = create_and_attach_client_to_transmitter(pid)
     :timer.sleep 100
-    Transmitter.append(pid, :awake)
+    Transmitter.append(pid, :keep_alive)
     Transmitter.add_tokens(pid, 4)
 
     assert {:ok, <<0, 0, 0, 0>>} = :gen_tcp.recv(client, 0)
     {_current_state, internal_state} = get_current_state(pid)
     assert {[], []} = internal_state.job_queue
     # the controller should receive the outgoing message
-    assert_receive :awake
+    assert_receive :keep_alive
   end
 
   test "should throttle bytes sent" do
@@ -90,7 +90,7 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
 
     {:ok, client} = create_and_attach_client_to_transmitter(pid)
     :timer.sleep 100
-    Transmitter.append(pid, :awake)
+    Transmitter.append(pid, :keep_alive)
     Transmitter.add_tokens(pid, 2)
 
     assert {:ok, <<0, 0>>} = :gen_tcp.recv(client, 0)
@@ -129,12 +129,12 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
 
     {:ok, client} = create_and_attach_client_to_transmitter(pid)
     :timer.sleep 100
-    Transmitter.append(pid, [{:have, 329}, :awake, {:request, 330, 2, 30}])
+    Transmitter.append(pid, [{:have, 329}, :keep_alive, {:request, 330, 2, 30}])
     Transmitter.add_tokens(pid, 2000)
 
     {:ok, _} = :gen_tcp.recv(client, 0)
     assert_receive {:have, 329}
-    assert_receive :awake
+    assert_receive :keep_alive
     assert_receive {:request, 330, 2, 30}
 
     {_current_state, internal_state} = get_current_state(pid)
@@ -149,10 +149,10 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
 
     {:ok, _client} = create_and_attach_client_to_transmitter(pid)
     :timer.sleep 100
-    Transmitter.append(pid, [:awake, :awake, :awake])
+    Transmitter.append(pid, [:keep_alive, :keep_alive, :keep_alive])
 
     {_current_state, internal_state} = get_current_state(pid)
-    assert {[:awake], []} == internal_state.job_queue
+    assert {[:keep_alive], []} == internal_state.job_queue
   end
 
   test "should be able to insert a job in the start of the queue" do
@@ -164,10 +164,10 @@ defmodule Hazel.Torrent.Swarm.Peer.TransmitterTest do
     {:ok, _client} = create_and_attach_client_to_transmitter(pid)
     :timer.sleep 100
     Transmitter.append(pid, {:choke, true})
-    Transmitter.prepend(pid, :awake)
+    Transmitter.prepend(pid, :keep_alive)
 
     {_current_state, internal_state} = get_current_state(pid)
-    assert {[{:choke, true}], [:awake]} == internal_state.job_queue
+    assert {[{:choke, true}], [:keep_alive]} == internal_state.job_queue
   end
 
   test "if a prepended job is already in the queue it should be moved to the front" do

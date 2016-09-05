@@ -34,7 +34,7 @@ defmodule Hazel.PeerWire do
   @type offset :: non_neg_integer
 
   @type message ::
-    :awake | {:choke, boolean} | {:interest, boolean} |
+    :keep_alive | {:choke, boolean} | {:interest, boolean} |
     {:bit_field, binary} | {:have, non_neg_integer} |
     {:request | :cancel, piece_index, offset, byte_length} |
     {:piece, piece_index, offset, block :: binary}
@@ -50,7 +50,7 @@ defmodule Hazel.PeerWire do
   @cancel 8
 
   @spec decode(binary) :: message
-  def decode(<<0::big-size(32)>>), do: :awake
+  def decode(<<0::big-size(32)>>), do: :keep_alive
   def decode(<<1::big-size(32), @choke>>), do: {:choke, true}
   def decode(<<1::big-size(32), @unchoke>>), do: {:choke, false}
   def decode(<<1::big-size(32), @interested>>), do: {:interest, true}
@@ -73,7 +73,7 @@ defmodule Hazel.PeerWire do
   end
 
   @spec encode(message) :: binary
-  def encode(:awake), do: <<0, 0, 0, 0>>
+  def encode(:keep_alive), do: <<0, 0, 0, 0>>
   def encode({:choke, status}) do
     status
     |> if(do: <<@choke>>, else: <<@unchoke>>)

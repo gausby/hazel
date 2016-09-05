@@ -4,8 +4,8 @@ defmodule Hazel.PeerWireTest do
   alias Hazel.PeerWire
 
   describe "encoding" do
-    test "awake messages" do
-      assert <<0, 0, 0, 0>> = PeerWire.encode(:awake)
+    test "keep alive messages" do
+      assert <<0, 0, 0, 0>> = PeerWire.encode(:keep_alive)
     end
 
     test "choke messages" do
@@ -49,8 +49,8 @@ defmodule Hazel.PeerWireTest do
   end
 
   describe "encoding coding" do
-    test "awake messages" do
-      assert :awake = PeerWire.decode(<<0, 0, 0, 0>>)
+    test "keep alive messages" do
+      assert :keep_alive = PeerWire.decode(<<0, 0, 0, 0>>)
     end
 
     test "choke messages" do

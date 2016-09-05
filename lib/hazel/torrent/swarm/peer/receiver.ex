@@ -72,7 +72,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Receiver do
 
   def handle_event(:internal, :consume, :consume_length, state) do
     case consume_bytes(state, @length_timeout) do
-      # zero length message (awake)
+      # zero length message (keep alive)
       {:ok, {{<<0, 0, 0, 0>>, 0}, _} = status} ->
         {data, status} = Allowance.get_and_reset_buffer(status)
         :ok = emit(state, data)

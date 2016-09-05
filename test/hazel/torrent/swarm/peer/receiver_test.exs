@@ -39,7 +39,7 @@ defmodule Hazel.Torrent.Swarm.Peer.ReceiverTest do
     assert is_pid(pid)
   end
 
-  test "receiving an awake message" do
+  test "receiving an keep alive message" do
     session = generate_session()
     {:ok, receiver_pid} = start_receiver(session)
 
@@ -52,15 +52,15 @@ defmodule Hazel.Torrent.Swarm.Peer.ReceiverTest do
         end,
 
         receive:
-        fn :awake, state ->
-          send state[:pid], :awake
+        fn :keep_alive, state ->
+          send state[:pid], :keep_alive
           :ok
         end
        ]])
 
     {:ok, client} = create_and_attach_client_to_receiver(receiver_pid)
     assert :ok = :gen_tcp.send(client, <<0,0,0,0>>)
-    assert_receive :awake
+    assert_receive :keep_alive
   end
 
   test "receiving a bunch of messages in a row" do

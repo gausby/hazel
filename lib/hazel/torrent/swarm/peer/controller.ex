@@ -171,7 +171,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
   #=Incoming =========================================================
   # Triggered when the receiver process has received a full message
   # from the remote.
-  defp handle_in(:awake, _state) do
+  defp handle_in(:keep_alive, _state) do
     {:ok, :keep_state}
   end
 
