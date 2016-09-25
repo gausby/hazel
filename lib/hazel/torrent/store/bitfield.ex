@@ -16,12 +16,12 @@ defmodule Hazel.Torrent.Store.BitField do
   """
   @spec start_link(local_id, info_hash, Map.t) :: on_start
   def start_link(local_id, info_hash, opts) do
-    Agent.start_link(initial_value(info_hash, opts), name: via_name({local_id, info_hash}))
+    Agent.start_link(initial_value(opts), name: via_name({local_id, info_hash}))
   end
 
-  defp initial_value(info_hash, opts) do
+  defp initial_value(opts) do
     size = calc_bitfield_size(opts[:length], opts[:piece_length])
-    fn -> BitFieldSet.new!(<<>>, size, info_hash) end
+    fn -> BitFieldSet.new!(<<>>, size) end
   end
 
   defp calc_bitfield_size(length, piece_length) do
@@ -45,7 +45,7 @@ defmodule Hazel.Torrent.Store.BitField do
   """
   @spec have(session, non_neg_integer) :: :ok
   def have(session, piece) do
-    Agent.update(via_name(session), BitFieldSet, :set, [piece])
+    Agent.update(via_name(session), BitFieldSet, :put, [piece])
   end
 
   @doc """
@@ -61,7 +61,7 @@ defmodule Hazel.Torrent.Store.BitField do
   """
   @spec has_all?(session) :: boolean
   def has_all?(session) do
-    Agent.get(via_name(session), BitFieldSet, :has_all?, [])
+    Agent.get(via_name(session), BitFieldSet, :full?, [])
   end
 
   @doc """
@@ -69,6 +69,6 @@ defmodule Hazel.Torrent.Store.BitField do
   """
   @spec available(session) :: MapSet.t
   def available(session) do
-    Agent.get(via_name(session), &(&1.pieces))
+    Agent.get(via_name(session), &(BitFieldSet.to_list(&1)))
   end
 end

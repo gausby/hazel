@@ -87,7 +87,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
   def init(opts) do
     with {{local_id, info_hash}, _peer_id} = opts[:session],
          {:ok, bit_field_size} = Store.bit_field_size({local_id, info_hash}),
-         {:ok, bit_field} = BitFieldSet.new(<<>>, bit_field_size, info_hash) do
+         {:ok, bit_field} = BitFieldSet.new(<<>>, bit_field_size) do
 
       {:ok, update_status(%__MODULE__{session: opts[:session], bit_field: bit_field})}
     end
@@ -187,7 +187,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
     # make sure the size of the bit field match the expected length
     if BitFieldSet.empty?(current) do
       {{_local_id, info_hash}, _peer_id} = state.session
-      case BitFieldSet.new(data, current.size, info_hash) do
+      case BitFieldSet.new(data, current.size) do
         {:ok, bit_field} ->
           {:ok, %{state|bit_field: bit_field}}
 
@@ -202,7 +202,7 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
 
   defp handle_in({:have, piece_index}, %{bit_field: bit_field} = state) do
     # update local bit field with this information
-    {:ok, %{state|bit_field: BitFieldSet.set(bit_field, piece_index)}}
+    {:ok, %{state|bit_field: BitFieldSet.put(bit_field, piece_index)}}
   end
 
   defp handle_in({:request, piece_index, offset, byte_length}, _state) do

@@ -22,7 +22,7 @@ defmodule Hazel.Torrent.Swarm.Peer.ControllerTest do
   end
 
   test "initial state" do
-    {{_, info_hash} = session, peer_id} = generate_session()
+    {session, peer_id} = generate_session()
     {:ok, pid} = Controller.start_link(session, peer_id, [])
     assert %Controller{} = status = Controller.status(pid)
     # Either we or the remote should be have interest on init
@@ -30,8 +30,7 @@ defmodule Hazel.Torrent.Swarm.Peer.ControllerTest do
     # and both should choke each other
     assert status.peer_choking?
     # the remote should have an empty bit field
-    assert MapSet.to_list(status.bit_field.pieces) == []
-    assert ^info_hash = status.bit_field.info_hash
+    assert BitFieldSet.empty?(status.bit_field)
   end
 
   test "changing choke status" do
@@ -91,7 +90,7 @@ defmodule Hazel.Torrent.Swarm.Peer.ControllerTest do
   end
 
   test "remote sends bit field information" do
-    {{_, info_hash} = session, peer_id} = generate_session()
+    {session, peer_id} = generate_session()
     {:ok, pid} = Controller.start_link(session, peer_id, [])
 
     assert BitFieldSet.empty?(Controller.status(pid).bit_field)
@@ -102,7 +101,7 @@ defmodule Hazel.Torrent.Swarm.Peer.ControllerTest do
     bit_field = Controller.status(pid).bit_field
     refute BitFieldSet.empty?(bit_field)
 
-    {:ok, expected} = BitFieldSet.new(data, 20, info_hash)
+    {:ok, expected} = BitFieldSet.new(data, 20)
     assert BitFieldSet.equal?(bit_field, expected)
   end
 

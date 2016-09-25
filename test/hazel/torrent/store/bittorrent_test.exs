@@ -23,6 +23,6 @@ defmodule Hazel.Torrent.Store.BitFieldTest do
     refute BitField.has_all?(session)
     assert :ok = BitField.have(session, 1)
     assert BitField.has_all?(session)
-    assert MapSet.new([0, 1]) == BitField.available(session)
+    assert [0, 1] == BitField.available(session)
   end
 end
