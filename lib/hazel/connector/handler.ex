@@ -8,7 +8,7 @@ defmodule Hazel.Connector.Handler do
   end
 
   def init(ref, socket, transport, local_id) do
-    :ok = :proc_lib.init_ack({:ok, self})
+    :ok = :proc_lib.init_ack({:ok, self()})
     :ok = :ranch.accept_ack(ref)
 
     with :ok <- not_on_the_blacklist(local_id, socket),
@@ -17,7 +17,7 @@ defmodule Hazel.Connector.Handler do
          :ok <- complete_handshake.(local_id, info_hash) do
       # add peer to the swarm and hand over the socket and transport
       session = {local_id, info_hash}
-      {:ok, pid} = Torrent.add_peer(session, peer_id)
+      {:ok, _pid} = Torrent.add_peer(session, peer_id)
       :ok = Swarm.Peer.handover_socket({session, peer_id}, {transport, socket})
     else
       {:error, :peer_is_blacklisted} ->
