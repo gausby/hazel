@@ -3,7 +3,7 @@ defmodule Hazel.TestHelpers.FauxServer do
 
   # Client API
   def start_link(session, opts \\ []) do
-    opts = Keyword.merge(opts, pid: self, session: session)
+    opts = Keyword.merge(opts, pid: self(), session: session)
     GenServer.start_link(__MODULE__, opts, name: via_name(session))
   end
 
@@ -50,5 +50,9 @@ defmodule Hazel.TestHelpers.FauxServer do
             message: "should return a `{:ok, reply, state}`- or an {:ok, reply}-tuple"
       end
     end
+  end
+
+  def handle_info(message, state) do
+    {:noreply, state}
   end
 end

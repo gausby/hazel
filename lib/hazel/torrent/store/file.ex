@@ -68,16 +68,14 @@ defmodule Hazel.Torrent.Store.File do
          {:ok, fd} <- open_file(opts[:name]),
          hashes = :ets.new(:hashes, []),
          true = :ets.insert(hashes, pieces) do
-      {:ok,
-       %State{source: opts[:name],
-              fd: fd,
-              hashes: hashes,
-              piece_length: opts[:piece_length],
-              last_piece_length: calculate_last_piece_length(opts[:length], opts[:piece_length]),
-              last_piece_index: length(pieces) - 1}}
+      {:ok, %State{source: opts[:name],
+                   fd: fd,
+                   hashes: hashes,
+                   piece_length: opts[:piece_length],
+                   last_piece_length: last_piece_length(opts[:length], opts[:piece_length]),
+                   last_piece_index: length(pieces) - 1}}
     else
-      {:error, reason} ->
-        {:stop, reason}
+      {:error, reason} -> {:stop, reason}
     end
   end
 
@@ -88,7 +86,7 @@ defmodule Hazel.Torrent.Store.File do
     File.open(file_name, [:read, :write] ++ extra_opts)
   end
 
-  defp calculate_last_piece_length(total_length, piece_length) do
+  defp last_piece_length(total_length, piece_length) do
     case rem(total_length, piece_length) do
       0 ->
         piece_length

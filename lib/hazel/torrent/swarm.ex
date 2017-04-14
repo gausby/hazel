@@ -22,8 +22,6 @@ defmodule Hazel.Torrent.Swarm do
     supervise(children, strategy: :simple_one_for_one)
   end
 
-  @type child :: pid | :undefined
-
   @doc """
   Add a peer to the swarm
   """
@@ -31,6 +29,7 @@ defmodule Hazel.Torrent.Swarm do
     {:ok, child} |
     {:ok, child, info :: term} |
     {:error, {:already_started, child} | :already_present | term}
+    when child: pid | :undefined
   def add_peer(session, peer_id) do
     Supervisor.start_child(via_name(session), [peer_id])
   end

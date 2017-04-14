@@ -6,12 +6,12 @@ defmodule Hazel.Supervisor do
   @type local_id :: binary
   @type options :: [option]
   @type option ::
-    {:port, integer}
+    {:port, integer()}
 
   @spec start_link(local_id, options) ::
     {:ok, pid} |
     :ignore |
-    {:error, {:already_started, pid} | {:shutdown, term} | term}
+    {:error, {:already_started, pid} | {:shutdown, term()} | term()}
   def start_link(<<local_id::binary-size(20)>>, opts \\ []) do
     Supervisor.start_link(__MODULE__, {local_id, opts}, name: via_name(local_id))
   end

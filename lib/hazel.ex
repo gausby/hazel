@@ -10,7 +10,7 @@ defmodule Hazel do
     Hazel.Supervisor.start_link(generate_peer_id(), opts)
   end
 
-  @spec open(Path.t) :: {Map.t, info_hash :: binary} | {:error, reason :: any}
+  @spec open(Path.t) :: {Map.t, info_hash :: binary()} | {:error, reason :: any()}
   def open(path) do
     case File.read(path) do
       {:ok, data} ->
