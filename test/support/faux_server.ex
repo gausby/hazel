@@ -52,7 +52,7 @@ defmodule Hazel.TestHelpers.FauxServer do
     end
   end
 
-  def handle_info(message, state) do
+  def handle_info(_message, state) do
     {:noreply, state}
   end
 end

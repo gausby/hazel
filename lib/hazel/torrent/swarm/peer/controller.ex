@@ -186,7 +186,6 @@ defmodule Hazel.Torrent.Swarm.Peer.Controller do
   defp handle_in({:bit_field, data}, %{bit_field: current} = state) do
     # make sure the size of the bit field match the expected length
     if BitFieldSet.empty?(current) do
-      {{_local_id, info_hash}, _peer_id} = state.session
       case BitFieldSet.new(data, current.size) do
         {:ok, bit_field} ->
           {:ok, %{state|bit_field: bit_field}}

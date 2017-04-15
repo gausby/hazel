@@ -143,6 +143,6 @@ defmodule Hazel.Torrent.Swarm.Peer.Receiver do
   end
 
   defp request_tokens(%{status: {_, 0}} = state) do
-    Peer.Controller.request_tokens(state.session, self)
+    Peer.Controller.request_tokens(state.session, self())
   end
 end
