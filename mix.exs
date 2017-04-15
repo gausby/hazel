@@ -24,7 +24,7 @@ defmodule Hazel.Mixfile do
      {:bencode, "~> 0.3.2"},
      {:bit_field_set, "~> 1.2.0"},
      {:gen_state_machine, "~> 2.0.0"},
-     {:gproc, "~> 0.5.0"},
+     {:gproc, "~> 0.6.0"},
      {:ranch, "~> 1.3.0"},
      {:allowance, github: "gausby/allowance"},
      {:dialyxir, "~> 0.5", only: [:dev], runtime: false}]
