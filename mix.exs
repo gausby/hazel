@@ -26,6 +26,7 @@ defmodule Hazel.Mixfile do
      {:gen_state_machine, "~> 2.0.0"},
      {:gproc, "~> 0.5.0"},
      {:ranch, "~> 1.2.1"},
-     {:allowance, github: "gausby/allowance"}]
+     {:allowance, github: "gausby/allowance"},
+     {:dialyxir, "~> 0.5", only: [:dev], runtime: false}]
   end
 end

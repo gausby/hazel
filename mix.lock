@@ -1,6 +1,7 @@
 %{"allowance": {:git, "https://github.com/gausby/allowance.git", "b9d26bc55a5f516e92266ef7df1b0195d61c6030", []},
   "bencode": {:hex, :bencode, "0.3.2", "1dece23710b54ef984852aa6abffac982e033eaaee8d57b6a6894ee8ddbd0c84", [:mix], [{:eqc_ex, "~> 1.2.4", [hex: :eqc_ex, optional: false]}]},
   "bit_field_set": {:hex, :bit_field_set, "1.2.0", "f2a190c2f31f5b7e601920c113d3c16a95560725bba18002eedc1366619dfbb9", [:mix], []},
+  "dialyxir": {:hex, :dialyxir, "0.5.0", "5bc543f9c28ecd51b99cc1a685a3c2a1a93216990347f259406a910cf048d1d7", [:mix], []},
   "eqc_ex": {:hex, :eqc_ex, "1.2.4", "c169c4025e6f59d95977b1d5f3846cd964e996449755d7e9bf6ac6d3a4520839", [:mix], []},
   "gen_stage": {:hex, :gen_stage, "0.3.0", "f3213dd6c8171ddc5a3a458e84a9d84dcaaf3c8c8f9609a5bc9b6137f896e913", [:mix], []},
   "gen_state_machine": {:hex, :gen_state_machine, "2.0.0", "f3bc7d961e4cd9f37944b379137e25fd063feffc42800bed69197fd1b78b3151", [:mix], []},
